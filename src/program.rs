@@ -5,26 +5,41 @@ use crate::utils::{roots_of_unity, Cell, Column};
 use crate::{assembly::AssemblyEqn, polynomial::Polynomial};
 use bls12_381::Scalar;
 pub struct CommonPreprocessedInput {
-    group_order: u64,
-    QL: Polynomial,
-    QR: Polynomial,
-    QM: Polynomial,
-    QO: Polynomial,
-    QC: Polynomial,
-    S1: Polynomial,
-    S2: Polynomial,
-    S3: Polynomial,
+    pub group_order: u64,
+    pub ql: Polynomial,
+    pub qr: Polynomial,
+    pub qm: Polynomial,
+    pub qo: Polynomial,
+    pub qc: Polynomial,
+    pub s1: Polynomial,
+    pub s2: Polynomial,
+    pub s3: Polynomial,
 }
 
 pub struct Program {
-    constraints: Vec<AssemblyEqn>,
-    group_order: u64,
+    pub constraints: Vec<AssemblyEqn>,
+    pub group_order: u64,
 }
 impl Program {
     pub fn new(constraints: Vec<AssemblyEqn>, group_order: u64) -> Program {
         Program {
             constraints,
             group_order,
+        }
+    }
+    pub fn common_preprocessed_input(&self) -> CommonPreprocessedInput {
+        let (ql, qr, qm, qo, qc) = self.make_gate_polynomials();
+        let (s1, s2, s3) = self.make_s_polynomials();
+        CommonPreprocessedInput {
+            group_order: self.group_order,
+            ql,
+            qr,
+            qm,
+            qo,
+            qc,
+            s1,
+            s2,
+            s3,
         }
     }
     pub fn make_gate_polynomials(

@@ -1,7 +1,7 @@
 use crate::polynomial::{Basis, Polynomial};
 use bls12_381::{G1Projective, G2Projective, Scalar};
 #[derive(Debug)]
-struct Setup {
+pub struct Setup {
     powers_of_x: Vec<G1Projective>,
     X2: G2Projective,
 }

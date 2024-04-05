@@ -14,6 +14,9 @@ pub struct CommonPreprocessedInput {
     pub s1: Polynomial,
     pub s2: Polynomial,
     pub s3: Polynomial,
+
+    pub s1_coeff: Option<Polynomial>,
+    pub s2_coeff: Option<Polynomial>,
 }
 
 pub struct Program {
@@ -40,6 +43,8 @@ impl Program {
             s1,
             s2,
             s3,
+            s1_coeff: None,
+            s2_coeff: None,
         }
     }
     pub fn make_gate_polynomials(
@@ -124,6 +129,7 @@ impl Program {
                 }
             }
         }
+
         //生成s1,s2，s3
         let mut s1 = None;
         let mut s2 = None;

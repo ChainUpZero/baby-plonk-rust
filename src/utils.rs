@@ -1,4 +1,8 @@
-use bls12_381::Scalar;
+use std::ops::Div;
+
+use crate::polynomial::Basis;
+use crate::polynomial::Polynomial;
+use bls12_381::{Scalar, MODULUS};
 use ff::PrimeField;
 use regex::Regex;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,13 +47,91 @@ impl Cell {
     }
 }
 
+pub fn root_of_unity(group_order: u64) -> Scalar {
+    let generator = Scalar::ROOT_OF_UNITY; //阶为2^32的子群的生成元
+
+    generator.pow(&[((u32::MAX as u64 + 1) / group_order), 0, 0, 0])
+}
+
 pub fn roots_of_unity(group_order: u64) -> Vec<Scalar> {
     let mut res = vec![Scalar::from(1)];
-    let generator = Scalar::ROOT_OF_UNITY;
+    let generator = root_of_unity(group_order);
     for _ in 1..group_order {
         res.push(res[res.len() - 1] * generator);
     }
     res
+}
+
+pub fn find_next_power_of_two(n: usize, m: usize) -> usize {
+    let mut power = 1;
+    let target = n + m + 1;
+    while power < target {
+        power <<= 1;
+    }
+    power
+}
+
+pub fn ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
+    let n = elements.len() as u64;
+    let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
+    (0..n).for_each(|x| (0..n).for_each(|y| matrix[x as usize][y as usize] = x * y));
+    // println!("{:#?}", matrix);
+    matrix
+        .iter()
+        .map(|row| {
+            elements
+                .iter()
+                .zip(row)
+                .map(|(elem, ij)| {
+                    elem * Scalar::ROOT_OF_UNITY.pow(&[*ij * ((u32::MAX as u64 + 1) / n), 0, 0, 0])
+                })
+                .sum::<Scalar>()
+        })
+        .collect::<Vec<Scalar>>()
+}
+
+/*
+pub fn i_ntt(elements: &[u64]) -> Result<Vec<u64>, String> {
+    let n = elements.len() as u64;
+    let modulus = find_modulus(elements)?;
+    let omega = find_primitive_root(n, modulus)?;
+    Ok(dft_matrix(n)
+        .iter()
+        .map(|row| {
+            elements
+                .iter()
+                .zip(row)
+                .map(|(elem, ij)| elem * omega.inv_pow_mod(*ij, modulus))
+                .sum::<u64>()
+                * n.inv_pow_mod(1, modulus)
+                % modulus
+        })
+        .collect::<Vec<u64>>())
+}
+ */
+
+pub fn i_ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
+    let n = elements.len() as u64;
+    let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
+    (0..n).for_each(|x| (0..n).for_each(|y| matrix[x as usize][y as usize] = x * y));
+    matrix
+        .iter()
+        .map(|row| {
+            elements
+                .iter()
+                .zip(row)
+                .map(|(elem, ij)| {
+                    elem * Scalar::ROOT_OF_UNITY_INV.pow(&[
+                        *ij * ((u32::MAX as u64 + 1) / n),
+                        0,
+                        0,
+                        0,
+                    ])
+                })
+                .sum::<Scalar>()
+                * Scalar::from(n).invert().unwrap()
+        })
+        .collect::<Vec<Scalar>>()
 }
 
 pub fn extract_number_and_variable(input: &str) -> Option<(Scalar, Vec<String>)> {
@@ -81,11 +163,30 @@ pub fn split_expression(expr: &str) -> Vec<String> {
         .map(String::from)
         .collect()
 }
+
+pub trait Rlc {
+    fn rlc(&self, other: &Self) -> Self;
+}
+impl Rlc for Scalar {
+    fn rlc(&self, other: &Self) -> Self {
+        self + other * Scalar::from(3) + Scalar::from(4)
+    }
+}
+impl Rlc for Polynomial {
+    fn rlc(&self, other: &Self) -> Self {
+        //polynomial_self + polynomial_other * 2 + 3
+
+        self.clone() + other.clone() * Scalar::from(3) + Scalar::from(4)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use crate::utils::{extract_number_and_variable, split_expression};
     use bls12_381::Scalar;
+
+    use super::root_of_unity;
     #[test]
     fn test_extract_number_and_variable() {
         //passed
@@ -138,5 +239,11 @@ mod tests {
                 "-46".to_string()
             ]
         );
+    }
+
+    #[test]
+    fn test_root_of_unity() {
+        let root_of_unity = root_of_unity(4);
+        assert_eq!(root_of_unity.pow(&[4, 0, 0, 0]), Scalar::from(1));
     }
 }

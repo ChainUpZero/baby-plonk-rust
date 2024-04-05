@@ -1,7 +1,6 @@
 use crate::utils::{extract_number_and_variable, split_expression};
 use bls12_381::Scalar;
 use ff::Field;
-use regex::Regex;
 #[derive(Debug)]
 pub struct GateWire {
     pub L: Option<String>,
@@ -144,8 +143,8 @@ mod tests {
             AssemblyEqn::eq_to_assembly("a <== 3 + abc")
         );
         println!(
-            "'a <== t + abc' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== t + abc")
+            "'a <== c + d' to assembly_eqn:{:?}",
+            AssemblyEqn::eq_to_assembly("a <== c + d")
         );
     }
 }

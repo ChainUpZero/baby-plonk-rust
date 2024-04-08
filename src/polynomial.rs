@@ -226,14 +226,16 @@ impl Div for Polynomial {
     fn div(self, other: Self) -> Self::Output {
         assert_eq!(self.basis, other.basis, "Basis must be the same");
 
-        let c1;
-        let c2;
+        let mut c1;
+        let mut c2;
         match self.basis {
             Basis::Monomial => {
+                println!("case 1\n");
                 c1 = self.values;
                 c2 = other.values;
             }
             Basis::Lagrange => {
+                println!("case 2\n");
                 c1 = i_ntt_381(&self.values);
                 c2 = i_ntt_381(&other.values);
             }
@@ -241,7 +243,25 @@ impl Div for Polynomial {
 
         //c1 / c2
 
+        // 移除c1和c2尾部的0
+        while let Some(&last) = c1.last() {
+            if last == Scalar::zero() {
+                c1.pop();
+            } else {
+                break;
+            }
+        }
+
+        while let Some(&last) = c2.last() {
+            if last == Scalar::zero() {
+                c2.pop();
+            } else {
+                break;
+            }
+        }
+
         if c2.last() == Some(&Scalar::zero()) {
+            println!("c2:{:?}", c2);
             panic!("Division by zero polynomial");
         }
 
@@ -359,17 +379,32 @@ mod tests {
     // c2 = (3,2,1)
     // c1 / c2 = (array([3.]), array([-8., -4.]))
 
-    // c1 = x^2 - 1 = [-1,0,1]
-    // c2 = x+1 = [1,1]
+    // c1 = x^2 - 1 = [-1,0,1,0,0,0]
+    // c2 = x+1 = [1,1,0,0]
     // c1 / c2 = x-1 = [-1,1]
     fn test_monomial_div() {
         //monomial意思是系数表示
         //passed!
         let p1 = Polynomial::new(
-            vec![Scalar::from(1).neg(), Scalar::from(0), Scalar::from(1)],
+            vec![
+                Scalar::from(1).neg(),
+                Scalar::from(0),
+                Scalar::from(1),
+                Scalar::zero(),
+                Scalar::zero(),
+                Scalar::zero(),
+            ],
             Basis::Monomial,
         );
-        let p2 = Polynomial::new(vec![Scalar::from(1), Scalar::from(1)], Basis::Monomial);
+        let p2 = Polynomial::new(
+            vec![
+                Scalar::from(1),
+                Scalar::from(1),
+                Scalar::zero(),
+                Scalar::zero(),
+            ],
+            Basis::Monomial,
+        );
 
         assert_eq!(
             p1.clone() / p2.clone(),

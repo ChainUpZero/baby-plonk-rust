@@ -18,7 +18,7 @@ pub struct CommonPreprocessedInput {
     pub s1_coeff: Option<Polynomial>,
     pub s2_coeff: Option<Polynomial>,
 }
-
+#[derive(Clone)]
 pub struct Program {
     pub constraints: Vec<AssemblyEqn>,
     pub group_order: u64,

@@ -3,20 +3,20 @@ use crate::{
     utils::ntt_381,
 };
 use bls12_381::{G1Projective, G2Projective, Scalar};
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Setup {
-    powers_of_x: Vec<G1Projective>,
-    X2: G2Projective,
+    pub powers_of_x: Vec<G1Projective>,
+    pub x_2: G2Projective,
 }
 impl Setup {
     pub fn generate_srs(powers: usize, tau: Scalar) -> Setup {
         //生成g1,tau*g1,tau^2 * g1...,tau^(powers-1) * g1
         //tau*g2
-        let a = 1;
+
         // println!("Start to generate SRS...");
         let mut setup = Setup {
             powers_of_x: Vec::new(),
-            X2: G2Projective::generator(),
+            x_2: G2Projective::generator(),
         };
         let cur_powers = G1Projective::generator();
 
@@ -26,7 +26,7 @@ impl Setup {
             setup.powers_of_x.push(cur_powers);
         }
 
-        setup.X2 = G2Projective::generator() * tau;
+        setup.x_2 = G2Projective::generator() * tau;
         // println!("Finish generating SRS.");
         setup
     }

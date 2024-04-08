@@ -1,7 +1,7 @@
 use crate::utils::{extract_number_and_variable, split_expression};
 use bls12_381::Scalar;
 use ff::Field;
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GateWire {
     pub L: Option<String>,
     pub R: Option<String>,
@@ -12,7 +12,7 @@ impl GateWire {
         vec![self.L.clone(), self.R.clone(), self.O.clone()]
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GateCoeffs {
     pub L: Scalar,
     pub R: Scalar,
@@ -21,7 +21,7 @@ pub struct GateCoeffs {
     pub C: Scalar,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AssemblyEqn {
     pub wires: GateWire,
     pub coeffs: GateCoeffs,

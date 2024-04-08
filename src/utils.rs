@@ -70,7 +70,7 @@ pub fn find_next_power_of_two(n: usize, m: usize) -> usize {
     }
     power
 }
-
+///系数到点值
 pub fn ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
     let n = elements.len() as u64;
     let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
@@ -109,7 +109,7 @@ pub fn i_ntt(elements: &[u64]) -> Result<Vec<u64>, String> {
         .collect::<Vec<u64>>())
 }
  */
-
+///点值到系数
 pub fn i_ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
     let n = elements.len() as u64;
     let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
@@ -174,7 +174,7 @@ impl Rlc for Scalar {
 }
 impl Rlc for Polynomial {
     fn rlc(&self, other: &Self) -> Self {
-        //polynomial_self + polynomial_other * 2 + 3
+        //polynomial_self + polynomial_other * 3 + 4
 
         self.clone() + other.clone() * Scalar::from(3) + Scalar::from(4)
     }

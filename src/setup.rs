@@ -32,14 +32,9 @@ impl Setup {
     }
     pub fn commit(&self, polynomial: &Polynomial) -> G1Projective {
         //默认是系数(monomial)形式
+        assert_eq!(polynomial.basis, Basis::Monomial);
+        let values = polynomial.values.clone();
 
-        let values;
-        if polynomial.basis == Basis::Lagrange {
-            values = ntt_381(&polynomial.values);
-        } else {
-            //系数表示
-            values = polynomial.values.clone();
-        }
         // assert_eq!(values.len(), self.powers_of_x.len());
         let mut commitment = G1Projective::identity();
         //commitment = a1 * g1 + a2 * tau * g1  + ...

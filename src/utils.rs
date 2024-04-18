@@ -73,6 +73,7 @@ pub fn find_next_power_of_two(n: usize, m: usize) -> usize {
 ///系数到点值
 pub fn ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
     let n = elements.len() as u64;
+    assert!(is_power_of_two(n));
     let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
     (0..n).for_each(|x| (0..n).for_each(|y| matrix[x as usize][y as usize] = x * y));
     // println!("{:#?}", matrix);
@@ -88,6 +89,9 @@ pub fn ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
                 .sum::<Scalar>()
         })
         .collect::<Vec<Scalar>>()
+}
+fn is_power_of_two(n: u64) -> bool {
+    n != 0 && (n & (n - 1)) == 0
 }
 
 /*
@@ -112,6 +116,7 @@ pub fn i_ntt(elements: &[u64]) -> Result<Vec<u64>, String> {
 ///点值到系数
 pub fn i_ntt_381(elements: &Vec<Scalar>) -> Vec<Scalar> {
     let n = elements.len() as u64;
+    assert!(is_power_of_two(n));
     let mut matrix: Vec<Vec<u64>> = vec![vec![0; n as usize]; n as usize];
     (0..n).for_each(|x| (0..n).for_each(|y| matrix[x as usize][y as usize] = x * y));
     matrix

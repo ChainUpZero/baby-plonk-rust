@@ -1,9 +1,10 @@
 use bls12_381::{pairing, G1Projective, G2Affine, Scalar};
 
 use crate::{
+    polynomial::{Basis, Polynomial},
     program::{self, Program},
     setup::Setup,
-    utils::{root_of_unity, Rlc},
+    utils::{i_ntt_381, root_of_unity, Rlc},
 };
 
 pub struct VerifierPreprocessedInput {
@@ -52,14 +53,14 @@ impl Verifier {
         let s3 = common_preprocessed_input.s3;
 
         let verifier_preprocessed_input = VerifierPreprocessedInput {
-            ql_1: setup.commit(&ql),
-            qr_1: setup.commit(&qr),
-            qm_1: setup.commit(&qm),
-            qo_1: setup.commit(&qo),
-            qc_1: setup.commit(&qc),
-            s1_1: setup.commit(&s1),
-            s2_1: setup.commit(&s2),
-            s3_1: setup.commit(&s3),
+            ql_1: setup.commit(&Polynomial::new(i_ntt_381(&ql.values), Basis::Monomial)),
+            qr_1: setup.commit(&Polynomial::new(i_ntt_381(&qr.values), Basis::Monomial)),
+            qm_1: setup.commit(&Polynomial::new(i_ntt_381(&qm.values), Basis::Monomial)),
+            qo_1: setup.commit(&Polynomial::new(i_ntt_381(&qo.values), Basis::Monomial)),
+            qc_1: setup.commit(&Polynomial::new(i_ntt_381(&qc.values), Basis::Monomial)),
+            s1_1: setup.commit(&Polynomial::new(i_ntt_381(&s1.values), Basis::Monomial)),
+            s2_1: setup.commit(&Polynomial::new(i_ntt_381(&s2.values), Basis::Monomial)),
+            s3_1: setup.commit(&Polynomial::new(i_ntt_381(&s3.values), Basis::Monomial)),
             x_2: setup.x_2.into(),
         };
 

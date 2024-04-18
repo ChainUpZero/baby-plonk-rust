@@ -180,6 +180,53 @@ impl Mul for Polynomial {
     type Output = Polynomial;
     fn mul(self, other: Self) -> Self::Output {
         assert_eq!(self.basis, other.basis, "Basis must be the same");
+        // let mut new_group_order;
+        // let mut self_coeff;
+        // let mut other_coeff;
+
+        // match self.basis {
+        //     Basis::Monomial => {
+        //         let n = self.values.len() - 1; //阶等于系数个数-1
+        //         let m = other.values.len() - 1;
+        //         new_group_order = find_next_power_of_two(n, m);
+
+        //         self_coeff = self.clone();
+        //         other_coeff = other.clone();
+        //     }
+        //     Basis::Lagrange => {
+        //         new_group_order = 2 * self.values.len();
+        //         self_coeff = Polynomial::new(i_ntt_381(&self.values), Basis::Monomial);
+        //         other_coeff = Polynomial::new(i_ntt_381(&other.values), Basis::Monomial);
+        //     }
+        // }
+        // let new_roots_of_unity: Vec<Scalar> = roots_of_unity(new_group_order as u64);
+
+        // let mut new_self_values = vec![Scalar::zero(); new_group_order];
+        // let mut new_other_values = vec![Scalar::zero(); new_group_order];
+        // for (i, x) in new_roots_of_unity.iter().enumerate() {
+        //     new_self_values[i] = self_coeff.coeffs_evaluate(*x);
+        //     new_other_values[i] = other_coeff.coeffs_evaluate(*x);
+        // }
+
+        // let product_lagrange_values: Vec<_> = new_self_values
+        //     .iter()
+        //     .zip(new_other_values.iter())
+        //     .map(|(v1, v2)| v1 * v2)
+        //     .collect();
+
+        // match self.basis {
+        //     Basis::Monomial => {
+        //         let n = self.values.len() - 1; //阶等于系数个数-1
+        //         let m = other.values.len() - 1;
+
+        //         let product_monomial_values = i_ntt_381(&product_lagrange_values);
+
+        //         Polynomial::new(product_monomial_values[0..=n + m].to_vec(), Basis::Monomial)
+        //     }
+
+        //     Basis::Lagrange => Polynomial::new(product_lagrange_values, Basis::Lagrange),
+        // }
+
         match self.basis {
             Basis::Monomial => {
                 //系数形式
@@ -216,6 +263,39 @@ impl Mul for Polynomial {
             }
             Basis::Lagrange => {
                 todo!()
+                // //n * n的点值表示,得到的系数表示为2n-2次
+                // //也就是 n 个点要扩展成2n-1个点，已有 n 个点，需要再有 n-1个点
+                // //先转化为系数表示，2nlogn
+                // //然后求 2n 个评估，复杂度为 n
+                // //然后对应点相乘，复杂度为 n
+                // //然后再 转换成点值，复杂度为 2nlog2n
+                // //总复杂度为2nlog2n
+
+                // //1.先将两个n个点的点值多项式扩展成2n-1个点
+                // let self_coeff = Polynomial::new(i_ntt_381(&self.values), Basis::Monomial);
+                // let other_coeff = Polynomial::new(i_ntt_381(&other.values), Basis::Monomial);
+
+                // let n = self.values.len();
+                // let new_group_order = 2 * n;
+
+                // let new_roots_of_unity: Vec<Scalar> = roots_of_unity(new_group_order as u64);
+
+                // //对self和other这两个多项式在new_roots_of_unity求值
+                // let mut new_self_values = vec![Scalar::zero(); new_group_order];
+                // let mut new_other_values = vec![Scalar::zero(); new_group_order];
+                // for (i, x) in new_roots_of_unity.iter().enumerate() {
+                //     new_self_values[i] = self_coeff.coeffs_evaluate(*x);
+                //     new_other_values[i] = other_coeff.coeffs_evaluate(*x);
+                // }
+                // let product_lagrange_values: Vec<_> = new_self_values
+                //     .iter()
+                //     .zip(new_other_values.iter())
+                //     .map(|(v1, v2)| v1 * v2)
+                //     .collect();
+                // Polynomial::new(product_lagrange_values, Basis::Lagrange)
+
+                // //2.然后将新的点值多项式相乘
+                // //3.把结果多项式转换成点值表示
             }
         }
     }
@@ -226,20 +306,10 @@ impl Div for Polynomial {
     fn div(self, other: Self) -> Self::Output {
         assert_eq!(self.basis, other.basis, "Basis must be the same");
 
-        let mut c1;
-        let mut c2;
-        match self.basis {
-            Basis::Monomial => {
-                println!("case 1\n");
-                c1 = self.values;
-                c2 = other.values;
-            }
-            Basis::Lagrange => {
-                println!("case 2\n");
-                c1 = i_ntt_381(&self.values);
-                c2 = i_ntt_381(&other.values);
-            }
-        }
+        assert_eq!(self.basis, Basis::Monomial);
+
+        let mut c1 = self.values;
+        let mut c2 = other.values;
 
         //c1 / c2
 
@@ -295,10 +365,7 @@ impl Div for Polynomial {
             // 更新商
             q.insert(0, coeff); // 直接在前面插入，避免之后的反转
         }
-        match self.basis {
-            Basis::Monomial => Polynomial::new(q, Basis::Monomial),
-            Basis::Lagrange => Polynomial::new(ntt_381(&q), Basis::Lagrange),
-        }
+        Polynomial::new(q, Basis::Monomial)
     }
 }
 
@@ -426,6 +493,46 @@ mod tests {
         assert_eq!(
             p1.clone() / p2.clone(),
             Polynomial::new(vec![Scalar::from(3)], Basis::Monomial)
+        );
+
+        let p1 = Polynomial::new(
+            vec![Scalar::from(1).neg(), Scalar::from(0), Scalar::from(1)],
+            Basis::Monomial,
+        );
+        let p2 = Polynomial::new(vec![Scalar::from(1), Scalar::from(1)], Basis::Monomial);
+
+        assert_eq!(
+            p1.clone() / p2.clone(),
+            Polynomial::new(
+                vec![Scalar::from(1).neg(), Scalar::from(1)],
+                Basis::Monomial
+            )
+        );
+    }
+    #[test]
+    fn test_lagrange_div() {
+        //c1 = [2,2] 次数为1
+        //c2 = [1,1] 次数为1
+        //c1 / c2 = [1,1]
+        //
+
+        let p1 = Polynomial::new(
+            vec![Scalar::from(3), Scalar::from(6), Scalar::from(9)],
+            Basis::Lagrange,
+        );
+        let p2 = Polynomial::new(
+            vec![Scalar::from(1), Scalar::from(2), Scalar::from(3)],
+            Basis::Lagrange,
+        );
+        assert_eq!(
+            p1 / p2,
+            Polynomial::new(vec![Scalar::from(3)], Basis::Lagrange)
+        );
+        let p1 = Polynomial::new(vec![Scalar::from(4), Scalar::from(2)], Basis::Lagrange);
+        let p2 = Polynomial::new(vec![Scalar::from(2)], Basis::Lagrange);
+        assert_eq!(
+            p1 / p2,
+            Polynomial::new(vec![Scalar::from(2), Scalar::from(1)], Basis::Lagrange)
         );
     }
 

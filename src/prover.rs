@@ -1,10 +1,8 @@
 use crate::polynomial::{Basis, Polynomial};
 use crate::program::{CommonPreprocessedInput, Program};
 use crate::setup::Setup;
-use crate::utils::{i_ntt_381, ntt_381, root_of_unity, roots_of_unity, Rlc};
+use crate::utils::{i_ntt_381, root_of_unity, roots_of_unity, Rlc};
 use bls12_381::{G1Projective, Scalar};
-use ff::Field;
-use std::collections::btree_map::Values;
 use std::collections::HashMap;
 pub struct RandomNums {
     pub alpha: Option<Scalar>,
@@ -643,7 +641,7 @@ mod tests {
     fn test_round_1() {
         //passed
         //round1用于生成a(x),b(x),c(x)和他们的承诺
-        let (mut prover, mut witness) = initilization();
+        let (mut prover, witness) = initilization();
 
         prover.round_1(witness);
         //如果constraints是vec!["c <== a*b"]
@@ -688,6 +686,7 @@ mod tests {
         let qc_coeff = Polynomial::new(i_ntt_381(&qc_values), Basis::Monomial);
         let qm_coeff = Polynomial::new(i_ntt_381(&qm_values), Basis::Monomial);
 
+        use crate::utils::ntt_381;
         println!("ql_coeff:{:?}", ql_coeff.clone());
         println!("ql_coeff convert:{:?}", ntt_381(&ql_coeff.values));
 
@@ -710,14 +709,14 @@ mod tests {
 
     fn test_round_2() {
         //passed
-        let (mut prover, mut witness) = initilization();
+        let (mut prover, witness) = initilization();
 
         prover.round_1(witness);
         prover.round_2();
     }
     #[test]
     fn test_round_3() {
-        let (mut prover, mut witness) = initilization();
+        let (mut prover, witness) = initilization();
 
         prover.round_1(witness);
         prover.round_2();
@@ -726,7 +725,7 @@ mod tests {
 
     #[test]
     fn test_round_4() {
-        let (mut prover, mut witness) = initilization();
+        let (mut prover, witness) = initilization();
 
         prover.round_1(witness);
         prover.round_2();
@@ -736,7 +735,7 @@ mod tests {
 
     #[test]
     fn test_round_5() {
-        let (mut prover, mut witness) = initilization();
+        let (mut prover, witness) = initilization();
 
         prover.round_1(witness);
         prover.round_2();
@@ -747,7 +746,7 @@ mod tests {
 
     #[test]
     fn test_coset() {
-        let omega = root_of_unity(8);
+        // let omega = root_of_unity(8);
         let v1 = roots_of_unity(8);
         let v2: Vec<Scalar> = v1.iter().map(|x| x * Scalar::from(2)).collect();
         let v3: Vec<Scalar> = v1.iter().map(|x| x * Scalar::from(3)).collect();

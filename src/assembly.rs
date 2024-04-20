@@ -109,7 +109,6 @@ impl AssemblyEqn {
 mod tests {
 
     use super::AssemblyEqn;
-    use crate::assembly::Scalar;
     #[test]
     fn test_eq_to_assembly() {
         //passed

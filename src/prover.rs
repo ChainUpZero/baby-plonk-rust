@@ -3,6 +3,7 @@ use crate::program::{CommonPreprocessedInput, Program};
 use crate::setup::Setup;
 use crate::utils::{i_ntt_381, ntt_381, root_of_unity, roots_of_unity, Rlc};
 use bls12_381::{G1Projective, Scalar};
+use ff::Field;
 use std::collections::btree_map::Values;
 use std::collections::HashMap;
 pub struct RandomNums {
@@ -269,6 +270,8 @@ impl Prover {
             Basis::Monomial,
         );
 
+        //以下是测试
+
         for i in 0..self.group_order as usize {
             assert_eq!(
                 self.witness_polys.a.as_ref().unwrap().values[i].rlc(&roots_of_unity[i])
@@ -283,6 +286,28 @@ impl Prover {
                     * z_omega.values[i % self.group_order as usize]
             )
         }
+
+        let omega = root_of_unity(self.group_order);
+        let beta = Scalar::from(3);
+        let gamma = Scalar::from(4);
+
+        let r2_x = (a_coeff.clone().coeffs_evaluate(omega) + beta * omega + gamma)
+            * (b_coeff.clone().coeffs_evaluate(omega) + beta * Scalar::from(2) * omega + gamma)
+            * (c_coeff.clone().coeffs_evaluate(omega) + beta * Scalar::from(3) * omega + gamma)
+            * z_coeff.clone().coeffs_evaluate(omega)
+            - (a_coeff.clone().coeffs_evaluate(omega)
+                + s1_coeff.clone().coeffs_evaluate(omega) * beta
+                + gamma)
+                * (b_coeff.clone().coeffs_evaluate(omega)
+                    + s2_coeff.clone().coeffs_evaluate(omega) * beta
+                    + gamma)
+                * (c_coeff.clone().coeffs_evaluate(omega)
+                    + self.pk.s3.i_ntt().coeffs_evaluate(omega) * beta
+                    + gamma)
+                * z_omega_coeff.clone().coeffs_evaluate(omega);
+        assert!(r2_x == Scalar::zero());
+
+        //以上
 
         let permutation_grand_product_coeff = (a_coeff.rlc(&roots_poly_coeff)
             * b_coeff.rlc(&(roots_poly_coeff.clone() * Scalar::from(2)))
@@ -306,6 +331,11 @@ impl Prover {
         let (t_lo_coeff, t_mid_coeff, t_hi_coeff) = self.split_t_to_3pieces(t_coeff.clone());
 
         println!("Generated the quotient polynomial!");
+
+        println!("t_coeff.len():{:?}", t_coeff.values.len());
+        println!("t_lo_coeff.len():{:?}", t_lo_coeff.values.len());
+        println!("t_mid_coeff.len():{:?}", t_mid_coeff.values.len());
+        println!("t_hi_coeff.len():{:?}", t_hi_coeff.values.len());
 
         let t_lo_1 = self.setup.commit(&t_lo_coeff);
         let t_mid_1 = self.setup.commit(&t_mid_coeff);
@@ -365,10 +395,10 @@ impl Prover {
         let s2_bar = self.pk.s2_coeff.as_ref().unwrap().coeffs_evaluate(zeta);
         let z_omega_bar = self
             .witness_polys
-            .z_coeff
+            .z_omega_coeff
             .as_ref()
             .unwrap()
-            .coeffs_evaluate(zeta * root_of_unity(self.group_order));
+            .coeffs_evaluate(zeta);
 
         self.evals = Some(Evaluations {
             a_bar,
@@ -404,35 +434,50 @@ impl Prover {
         let s2_coeff = self.pk.s2_coeff.clone().unwrap();
         let z_coeff = self.witness_polys.z_coeff.clone().unwrap();
 
-        let r1 = self.pk.qm.clone() * a_bar * b_bar
-            + self.pk.ql.clone() * a_bar
-            + self.pk.qr.clone() * b_bar
-            + self.pk.qo.clone() * c_bar
-            + self.pk.qc.clone();
+        // let r1 = self.pk.qm.clone() * a_bar * b_bar
+        //     + self.pk.ql.clone() * a_bar
+        //     + self.pk.qr.clone() * b_bar
+        //     + self.pk.qo.clone() * c_bar
+        //     + self.pk.qc.clone();
 
-        let r1_coeff = Polynomial::new(r1.values, Basis::Monomial);
+        // let r1_coeff = Polynomial::new(i_ntt_381(&r1.values), Basis::Monomial);
 
-        let r2 = (self.witness_polys.z.clone().unwrap()
-            * (a_bar + beta * zeta + gamma)
-            * (b_bar + beta * Scalar::from(2) * zeta + gamma)
-            * (c_bar + beta * Scalar::from(3) * zeta + gamma)
-            - (self.pk.s3.clone() * beta + gamma + c_bar)
-                * (a_bar + beta * s1_bar + gamma)
-                * (b_bar + beta * s2_bar + gamma)
-                * z_omega_bar)
-            * alpha;
+        let r1_coeff = self.pk.qm.i_ntt() * a_bar * b_bar
+            + self.pk.ql.i_ntt() * a_bar
+            + self.pk.qr.i_ntt() * b_bar
+            + self.pk.qo.i_ntt() * c_bar
+            + self.pk.qc.i_ntt();
 
-        let r2_coeff = Polynomial::new(r2.values, Basis::Monomial);
+        // let r2 = self.witness_polys.z.clone().unwrap()
+        //     * (a_bar + beta * zeta + gamma)
+        //     * (b_bar + beta * Scalar::from(2) * zeta + gamma)
+        //     * (c_bar + beta * Scalar::from(3) * zeta + gamma)
+        //     - (self.pk.s3.clone() * beta + gamma + c_bar)
+        //         * (a_bar + beta * s1_bar + gamma)
+        //         * (b_bar + beta * s2_bar + gamma)
+        //         * z_omega_bar;
+
+        // let r2_coeff = Polynomial::new(i_ntt_381(&r2.values), Basis::Monomial);
+
+        let r2_coeff = z_coeff.clone()
+            * (a_bar + zeta * beta + gamma)
+            * (b_bar + zeta * beta * Scalar::from(2) + gamma)
+            * (c_bar + zeta * beta * Scalar::from(3) + gamma)
+            - (self.pk.s3.i_ntt() * beta + c_bar + gamma)
+                * (a_bar + s1_bar * beta + gamma)
+                * (b_bar + s2_bar * beta + gamma)
+                * z_omega_bar;
 
         let mut l1_values = vec![Scalar::zero(); self.group_order as usize];
         l1_values[0] = Scalar::one();
         let l1_coeff = Polynomial::new(i_ntt_381(&l1_values), Basis::Monomial);
 
-        let r3 = ((self.witness_polys.z.clone().unwrap() - Scalar::from(1))
-            * l1_coeff.coeffs_evaluate(zeta))
-            * alpha.pow(&[2u64, 0, 0, 0]);
+        // let r3 = ((self.witness_polys.z.clone().unwrap() - Scalar::from(1))
+        //     * l1_coeff.coeffs_evaluate(zeta));
 
-        let r3_coeff = Polynomial::new(r3.values, Basis::Monomial);
+        // let r3_coeff = Polynomial::new(i_ntt_381(&r3.values), Basis::Monomial);
+
+        let r3_coeff = (z_coeff.clone() - Scalar::one()) * l1_coeff.coeffs_evaluate(zeta);
 
         //x^n-1
         let mut z_h_values = vec![Scalar::one().neg()];
@@ -442,6 +487,10 @@ impl Prover {
         z_h_values.push(Scalar::one());
         let z_h_coeff = Polynomial::new(z_h_values, Basis::Monomial);
 
+        let omega = root_of_unity(self.group_order);
+
+        assert_eq!(z_h_coeff.coeffs_evaluate(omega), Scalar::zero());
+
         let r4_coeff = (self.witness_polys.t_lo_coeff.clone().unwrap()
             + self.witness_polys.t_mid_coeff.clone().unwrap()
                 * zeta.pow(&[self.group_order, 0, 0, 0])
@@ -449,7 +498,71 @@ impl Prover {
                 * zeta.pow(&[2 * self.group_order, 0, 0, 0]))
             * z_h_coeff.coeffs_evaluate(zeta);
 
-        let r = r1_coeff + r2_coeff + r3_coeff - r4_coeff;
+        let r_coeff =
+            r1_coeff.clone() + r2_coeff.clone() * alpha + r3_coeff.clone() * alpha * alpha
+                - r4_coeff.clone();
+
+        assert_eq!(r_coeff.coeffs_evaluate(zeta), Scalar::zero());
+
+        //以下是测试
+        //
+        //
+        // let r1_x = a_coeff.clone() * b_coeff.clone() * self.pk.qm.i_ntt().clone()
+        //     + a_coeff.clone() * self.pk.ql.i_ntt().clone()
+        //     + b_coeff.clone() * self.pk.qr.i_ntt().clone()
+        //     + c_coeff.clone() * self.pk.qo.i_ntt().clone()
+        //     + self.pk.qc.i_ntt().clone();
+        // assert!(r1_x.coeffs_evaluate(omega * omega * omega) == Scalar::zero());
+
+        // let x = Polynomial::new(vec![Scalar::zero(), Scalar::one()], Basis::Monomial);
+        // println!("x:{:?}", x);
+
+        // let r2_x = (a_coeff.clone() + x.clone() * beta + gamma)
+        //     * (b_coeff.clone() + x.clone() * beta * Scalar::from(2) + gamma)
+        //     * (c_coeff.clone() + x.clone() * beta * Scalar::from(3) + gamma)
+        //     * z_coeff.clone()
+        //     - self.witness_polys.z_omega_coeff.clone().unwrap()
+        //         * (a_coeff.clone() + s1_coeff.clone() * beta + gamma)
+        //         * (b_coeff.clone() + s2_coeff.clone() * beta + gamma)
+        //         * (c_coeff.clone() + self.pk.s3.i_ntt() * beta + gamma);
+        // // assert!(r2_x == Scalar::zero());
+        // assert!(r2_x.coeffs_evaluate(omega * omega) == Scalar::zero());
+
+        // let r3_x = (z_coeff.clone() - Scalar::one()) * l1_coeff.clone();
+        // assert!(r3_x.coeffs_evaluate(omega * omega * omega) == Scalar::zero());
+
+        // assert!(
+        //     (r1_x.clone() + r2_x.clone() * alpha + r3_x.clone() * alpha * alpha)
+        //         .coeffs_evaluate(omega)
+        //         == Scalar::zero()
+        // );
+
+        // let mut x_n_values = vec![Scalar::zero(); self.group_order as usize];
+        // x_n_values.push(Scalar::one());
+        // let x_n = Polynomial::new(x_n_values, Basis::Monomial);
+
+        // let mut x_2n_values = vec![Scalar::zero(); (self.group_order * 2) as usize];
+        // x_2n_values.push(Scalar::one());
+        // let x_2n = Polynomial::new(x_2n_values, Basis::Monomial);
+
+        // let r4_x = (self.witness_polys.t_lo_coeff.clone().unwrap()
+        //     + self.witness_polys.t_mid_coeff.clone().unwrap() * x_n.clone()
+        //     + self.witness_polys.t_hi_coeff.clone().unwrap() * x_2n.clone())
+        //     * z_h_coeff.clone();
+        // assert!(r4_x.coeffs_evaluate(omega) == Scalar::zero());
+        // assert!(
+        //     (r1_x + r2_x * alpha + r3_x * alpha * alpha - r4_x).coeffs_evaluate(zeta)
+        //         == Scalar::zero()
+        // ); //zeta omega passed
+
+        // //
+
+        // // assert_eq!(r3_coeff.coeffs_evaluate(omega), Scalar::zero()); //失败
+        // assert_eq!(r_coeff.coeffs_evaluate(zeta), Scalar::zero());
+
+        //
+        //
+        //以上是测试
 
         //x - zeta = -zeta + x
         //系数形式
@@ -457,7 +570,7 @@ impl Prover {
         x_minus_zeta_poly_values[0] = zeta.neg();
         x_minus_zeta_poly_values[1] = Scalar::one();
 
-        let w_zeta = (r
+        let w_zeta_coeff = (r_coeff
             + (a_coeff.clone() - a_bar) * nu
             + (b_coeff.clone() - b_bar) * nu * nu
             + (c_coeff.clone() - c_bar) * nu.pow(&[3u64, 0, 0, 0])
@@ -471,14 +584,20 @@ impl Prover {
         x_minus_zeta_omega_poly_values[0] = (zeta * omega).neg();
         x_minus_zeta_omega_poly_values[1] = Scalar::one();
 
-        let w_zeta_omega = (z_coeff - z_omega_bar)
+        let w_zeta_omega_coeff = (z_coeff - z_omega_bar)
             / Polynomial::new(x_minus_zeta_omega_poly_values, Basis::Monomial);
 
-        let w_zeta_1 = self.setup.commit(&w_zeta);
-        let w_zeta_omega_1 = self.setup.commit(&w_zeta_omega);
+        println!("w_zeta.len():{:?}", w_zeta_coeff.values.len());
+        println!(
+            "w_zeta_omega_coeff.len():{:?}",
+            w_zeta_omega_coeff.values.len()
+        );
 
-        self.witness_polys.w_zeta = Some(w_zeta);
-        self.witness_polys.w_zeta_omega = Some(w_zeta_omega);
+        let w_zeta_1 = self.setup.commit(&w_zeta_coeff);
+        let w_zeta_omega_1 = self.setup.commit(&w_zeta_omega_coeff);
+
+        self.witness_polys.w_zeta = Some(w_zeta_coeff);
+        self.witness_polys.w_zeta_omega = Some(w_zeta_omega_coeff);
 
         (w_zeta_1, w_zeta_omega_1)
     }
@@ -624,5 +743,24 @@ mod tests {
         prover.round_3();
         prover.round_4();
         prover.round_5();
+    }
+
+    #[test]
+    fn test_coset() {
+        let omega = root_of_unity(8);
+        let v1 = roots_of_unity(8);
+        let v2: Vec<Scalar> = v1.iter().map(|x| x * Scalar::from(2)).collect();
+        let v3: Vec<Scalar> = v1.iter().map(|x| x * Scalar::from(3)).collect();
+        assert!(!has_intersection(&v1, &v2));
+        assert!(!has_intersection(&v1, &v3));
+        assert!(!has_intersection(&v3, &v2));
+    }
+    fn has_intersection<T: PartialEq>(vec1: &Vec<T>, vec2: &Vec<T>) -> bool {
+        for item1 in vec1 {
+            if vec2.contains(item1) {
+                return true;
+            }
+        }
+        false
     }
 }

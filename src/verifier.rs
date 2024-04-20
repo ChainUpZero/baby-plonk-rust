@@ -85,7 +85,6 @@ impl Verifier {
         //step 6
         let omega = root_of_unity(self.group_order);
         let n = Scalar::from(self.group_order);
-        let zeta = zeta;
         let l_1_zeta = omega * (z_h_zeta) * (n * (zeta - omega)).invert().unwrap();
 
         //step 7
@@ -168,5 +167,31 @@ impl Verifier {
                 &(zeta * w_zeta_1 + mu * zeta * omega * w_zeta_omega_1 + f_1 - e_1).into(),
                 &G2Affine::generator(),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use bls12_381::G1Affine;
+
+    use crate::assembly::AssemblyEqn;
+
+    use super::*;
+
+    #[test]
+    fn test_pairing() {
+        //2*3 = 6*1
+
+        assert_eq!(
+            pairing(
+                &(G1Affine::generator() * Scalar::from(2)).into(),
+                &(Scalar::from(3) * G2Affine::generator()).into()
+            ),
+            pairing(
+                &(Scalar::from(6) * G1Affine::generator()).into(),
+                &G2Affine::generator()
+            )
+        )
     }
 }

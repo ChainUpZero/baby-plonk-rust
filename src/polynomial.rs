@@ -43,6 +43,16 @@ impl Polynomial {
         }
         res
     }
+    ///系数到点值
+    pub fn ntt(&self) -> Polynomial {
+        assert_eq!(self.basis, Basis::Monomial);
+        Polynomial::new(ntt_381(&self.values), Basis::Lagrange)
+    }
+    ///点值到系数
+    pub fn i_ntt(&self) -> Polynomial {
+        assert_eq!(self.basis, Basis::Lagrange);
+        Polynomial::new(i_ntt_381(&self.values), Basis::Monomial)
+    }
 }
 impl Add<Scalar> for Polynomial {
     type Output = Polynomial;
@@ -539,6 +549,7 @@ mod tests {
     #[test]
     fn test_coeffs_evaluate() {
         //passed
+        //1+3x+2x^2
         let p = Polynomial::new(
             vec![Scalar::from(1), Scalar::from(3), Scalar::from(2)],
             Basis::Monomial,

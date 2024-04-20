@@ -1,7 +1,7 @@
 use crate::utils::{find_next_power_of_two, i_ntt_381, ntt_381, roots_of_unity};
 use bls12_381::Scalar;
 use std::{
-    clone, iter,
+    iter,
     ops::{Add, Div, Mul, Sub},
 };
 #[derive(Debug, Clone, PartialEq, Copy)]

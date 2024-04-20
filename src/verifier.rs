@@ -2,7 +2,7 @@ use bls12_381::{pairing, G1Projective, G2Affine, Scalar};
 
 use crate::{
     polynomial::{Basis, Polynomial},
-    program::{self, Program},
+    program::Program,
     setup::Setup,
     utils::{i_ntt_381, root_of_unity, Rlc},
 };
@@ -174,8 +174,6 @@ impl Verifier {
 mod tests {
 
     use bls12_381::G1Affine;
-
-    use crate::assembly::AssemblyEqn;
 
     use super::*;
 

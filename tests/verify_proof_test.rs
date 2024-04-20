@@ -5,7 +5,7 @@ use baby_plonk_rust::{
     program::Program,
     setup::Setup,
     verifier::{Proof, Verifier},
-    Prover::Prover,
+    prover::Prover,
 };
 use bls12_381::Scalar;
 

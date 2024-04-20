@@ -1,8 +1,5 @@
-use std::ops::Div;
-
-use crate::polynomial::Basis;
 use crate::polynomial::Polynomial;
-use bls12_381::{Scalar, MODULUS};
+use bls12_381::Scalar;
 use ff::PrimeField;
 use regex::Regex;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

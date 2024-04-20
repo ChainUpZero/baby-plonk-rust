@@ -1,7 +1,4 @@
-use crate::{
-    polynomial::{Basis, Polynomial},
-    utils::ntt_381,
-};
+use crate::polynomial::{Basis, Polynomial};
 use bls12_381::{G1Projective, G2Projective, Scalar};
 #[derive(Debug, Clone)]
 pub struct Setup {
@@ -49,7 +46,7 @@ impl Setup {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{polynomial, utils::i_ntt_381};
+    use crate::utils::i_ntt_381;
 
     use super::*;
 
@@ -86,6 +83,7 @@ mod tests {
     #[test]
     fn test_ntt() {
         //passed
+        use crate::utils::ntt_381;
         let test_vec = vec![Scalar::from(3), Scalar::from(3)];
         let mid = ntt_381(&test_vec);
         println!("res:{:?}", mid);

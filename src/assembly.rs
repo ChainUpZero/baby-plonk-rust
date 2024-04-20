@@ -67,7 +67,7 @@ impl AssemblyEqn {
                     if gate_coeffs.L.is_zero().into() {
                         gate_coeffs.L = coeffs;
                         gate_wires.L = Some(variable[0].clone());
-                    } else if (gate_coeffs.R.is_zero().into()) {
+                    } else if gate_coeffs.R.is_zero().into() {
                         gate_coeffs.R = coeffs;
                         gate_wires.R = Some(variable[0].clone());
                     } else {

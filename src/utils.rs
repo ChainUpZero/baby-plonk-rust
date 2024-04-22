@@ -167,18 +167,18 @@ pub fn split_expression(expr: &str) -> Vec<String> {
 }
 
 pub trait Rlc {
-    fn rlc(&self, other: &Self) -> Self;
+    fn rlc(&self, other: &Self, beta: Scalar, gamma: Scalar) -> Self;
 }
 impl Rlc for Scalar {
-    fn rlc(&self, other: &Self) -> Self {
-        self + other * Scalar::from(3) + Scalar::from(4)
+    fn rlc(&self, other: &Self, beta: Scalar, gamma: Scalar) -> Self {
+        self + other * beta + gamma
     }
 }
 impl Rlc for Polynomial {
-    fn rlc(&self, other: &Self) -> Self {
+    fn rlc(&self, other: &Self, beta: Scalar, gamma: Scalar) -> Self {
         //polynomial_self + polynomial_other * 3 + 4
 
-        self.clone() + other.clone() * Scalar::from(3) + Scalar::from(4)
+        self.clone() + other.clone() * beta + gamma
     }
 }
 

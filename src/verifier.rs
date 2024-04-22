@@ -1,9 +1,11 @@
 use bls12_381::{pairing, G1Projective, G2Affine, Scalar};
+use merlin::Transcript;
 
 use crate::{
     polynomial::{Basis, Polynomial},
     program::Program,
     setup::Setup,
+    transcript::PlonkTranscript,
     utils::{i_ntt_381, root_of_unity, Rlc},
 };
 
@@ -18,6 +20,7 @@ pub struct VerifierPreprocessedInput {
     s3_1: G1Projective,
     x_2: G2Affine,
 }
+#[derive(Clone, Copy)]
 pub struct Proof {
     pub a_1: G1Projective,
     pub b_1: G1Projective,
@@ -39,6 +42,8 @@ pub struct Verifier {
     verifier_preprocessed_input: VerifierPreprocessedInput,
     proof: Proof,
     group_order: u64,
+    k1: Scalar,
+    k2: Scalar,
 }
 impl Verifier {
     pub fn new(setup: Setup, program: Program, proof: Proof) -> Verifier {
@@ -68,16 +73,13 @@ impl Verifier {
             verifier_preprocessed_input,
             proof,
             group_order: program.group_order,
+            k1: Scalar::from(2),
+            k2: Scalar::from(3),
         }
     }
     pub fn verify(&mut self) -> bool {
         //step 4
-        let alpha = Scalar::from(2);
-        let beta = Scalar::from(3);
-        let gamma = Scalar::from(4);
-        let zeta = Scalar::from(5);
-        let nu = Scalar::from(6);
-        let mu = Scalar::from(7);
+        let (beta, gamma, alpha, zeta, nu, mu) = self.compute_challengs(self.proof);
 
         //step 5
         let z_h_zeta = zeta.pow(&[self.group_order, 0, 0, 0]) - Scalar::one();
@@ -100,7 +102,11 @@ impl Verifier {
         // ?疑点
         let r_0 = Scalar::zero()
             - l_1_zeta * alpha * alpha
-            - alpha * (a_bar.rlc(&s1_bar)) * (b_bar.rlc(&s2_bar)) * (c_bar + gamma) * z_omega_bar;
+            - alpha
+                * (a_bar.rlc(&s1_bar, beta, gamma))
+                * (b_bar.rlc(&s2_bar, beta, gamma))
+                * (c_bar + gamma)
+                * z_omega_bar;
 
         //step 9
         let qm_1 = self.verifier_preprocessed_input.qm_1;
@@ -117,14 +123,19 @@ impl Verifier {
         let t_hi_1 = self.proof.t_hi_1;
 
         let d_1_1 = a_bar * b_bar * qm_1 + a_bar * ql_1 + b_bar * qr_1 + c_bar * qo_1 + qc_1;
-        let d_1_2 = (a_bar.rlc(&zeta)
-            * b_bar.rlc(&(Scalar::from(2) * zeta))
-            * c_bar.rlc(&(Scalar::from(3) * zeta))
+        let d_1_2 = (a_bar.rlc(&zeta, beta, gamma)
+            * b_bar.rlc(&(self.k1 * zeta), beta, gamma)
+            * c_bar.rlc(&(self.k2 * zeta), beta, gamma)
             * alpha
             + l_1_zeta * alpha * alpha
             + mu)
             * z_1;
-        let d_1_3 = a_bar.rlc(&s1_bar) * b_bar.rlc(&s2_bar) * alpha * beta * z_omega_bar * s3_1;
+        let d_1_3 = a_bar.rlc(&s1_bar, beta, gamma)
+            * b_bar.rlc(&s2_bar, beta, gamma)
+            * alpha
+            * beta
+            * z_omega_bar
+            * s3_1;
         let d_1_4 = z_h_zeta
             * (t_lo_1
                 + zeta.pow(&[self.group_order, 0, 0, 0]) * t_mid_1
@@ -167,6 +178,23 @@ impl Verifier {
                 &(zeta * w_zeta_1 + mu * zeta * omega * w_zeta_omega_1 + f_1 - e_1).into(),
                 &G2Affine::generator(),
             )
+    }
+    fn compute_challengs(&self, proof: Proof) -> (Scalar, Scalar, Scalar, Scalar, Scalar, Scalar) {
+        let mut transcript = Transcript::new(b"plonk");
+
+        let (beta, gamma) = transcript.round_1(proof.a_1, proof.b_1, proof.c_1);
+        let alpha = transcript.round_2(proof.z_1);
+        let zeta = transcript.round_3(proof.t_lo_1, proof.t_mid_1, proof.t_hi_1);
+        let nu = transcript.round_4(
+            proof.a_bar,
+            proof.b_bar,
+            proof.c_bar,
+            proof.s1_bar,
+            proof.s2_bar,
+            proof.z_omega_bar,
+        );
+        let mu = transcript.round_5(proof.w_zeta_1, proof.w_zeta_omega_1);
+        (beta, gamma, alpha, zeta, nu, mu)
     }
 }
 

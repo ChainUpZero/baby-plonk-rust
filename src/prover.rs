@@ -8,8 +8,6 @@ use crate::verifier::Proof;
 use bls12_381::{G1Projective, Scalar};
 use ff::Field;
 use merlin::Transcript;
-use std::collections::btree_map::Values;
-
 use std::collections::HashMap;
 
 pub struct RandomNums {

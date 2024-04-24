@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+use crate::assembly::GateWire;
 use crate::polynomial::Basis;
 use crate::utils::{roots_of_unity, Cell, Column};
 use crate::{assembly::AssemblyEqn, polynomial::Polynomial};
 use bls12_381::Scalar;
+
 pub struct CommonPreprocessedInput {
     pub group_order: u64,
     pub ql: Polynomial,
@@ -18,11 +20,13 @@ pub struct CommonPreprocessedInput {
     pub s1_coeff: Option<Polynomial>,
     pub s2_coeff: Option<Polynomial>,
 }
+
 #[derive(Clone)]
 pub struct Program {
     pub constraints: Vec<AssemblyEqn>,
     pub group_order: u64,
 }
+
 impl Program {
     pub fn new(constraints: Vec<AssemblyEqn>, group_order: u64) -> Program {
         Program {
@@ -143,7 +147,54 @@ impl Program {
         }
         (s1.unwrap(), s2.unwrap(), s3.unwrap())
     }
+
+    pub fn coeffs(&self) -> Vec<HashMap<Option<String>, Scalar>> {
+        let mut coeffs = Vec::new();
+        for constraint in self.constraints.iter() {
+            let mut constraint_coeffs = HashMap::new();
+            constraint_coeffs.insert(Some("L".to_string()), constraint.coeffs.L);
+            constraint_coeffs.insert(Some("R".to_string()), constraint.coeffs.R);
+            constraint_coeffs.insert(Some("M".to_string()), constraint.coeffs.M);
+            constraint_coeffs.insert(Some("O".to_string()), constraint.coeffs.O);
+            constraint_coeffs.insert(Some("C".to_string()), constraint.coeffs.C);
+            coeffs.push(constraint_coeffs);
+        }
+        coeffs
+    }
+
+    pub fn wires(&self) -> Vec<GateWire> {
+        let mut wires = Vec::new();
+        for constraint in self.constraints.iter() {
+            wires.push(constraint.wires.clone());
+        }
+        return wires;
+    }
+
+    pub fn get_public_assignment(&self) -> Vec<Option<String>> {
+        let coeffs = self.coeffs();
+        let mut out = Vec::new();
+        let mut no_more_allowed = false;
+        for coeff in coeffs.iter() {
+            if coeff.get(&Some("$public".to_string())) != None
+            {
+                if no_more_allowed {
+                    panic!("Public var declarations must be at the top")
+                }
+                let mut var_name = Vec::new();
+                for (key, _) in coeff.iter() {
+                    if key.clone().unwrap().chars().next().unwrap() != '$' {
+                        var_name.push(key.clone().unwrap());
+                    }
+                }
+                out.push(Some(var_name.join("")));
+            } else {
+                no_more_allowed = true;
+            }
+        }
+        out
+    }
 }
+
 #[cfg(test)]
 mod test {
     use bls12_381::Scalar;
@@ -186,5 +237,31 @@ mod test {
         // println!("s1:{:?}", s1);
         // println!("s2:{:?}", s2);
         // println!("s3:{:?}", s3);
+    }
+
+    #[test]
+    fn test_coeffs() {
+        let original_constriants = ["c <== a*b", "b <== a*e"];
+        let mut assembly_eqns = Vec::new();
+        for eq in original_constriants.iter() {
+            let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
+            assembly_eqns.push(assembly_eqn);
+        }
+        let program = Program::new(assembly_eqns, 8);
+        let coeffs = program.coeffs();
+        println!("{:#?}", coeffs);
+    }
+
+    #[test]
+    fn test_wires() {
+        let original_constriants = ["c <== a*b", "b <== a*e"];
+        let mut assembly_eqns = Vec::new();
+        for eq in original_constriants.iter() {
+            let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
+            assembly_eqns.push(assembly_eqn);
+        }
+        let program = Program::new(assembly_eqns, 8);
+        let t_wires = program.wires();
+        println!("{:#?}", t_wires);
     }
 }

@@ -150,11 +150,11 @@ mod tests {
 
 use std::{collections::HashMap, panic};
 
-fn evaluate(exprs: &Vec<&str>) -> HashMap<Option<String>, i64> {
+fn evaluate(exprs: &Vec<&str>) -> HashMap<Option<String>, Scalar> {
     evaluate_inner(exprs, false)
 }
 
-fn evaluate_inner(exprs: &Vec<&str>, first_is_negative: bool) -> HashMap<Option<String>, i64> {
+fn evaluate_inner(exprs: &Vec<&str>, first_is_negative: bool) -> HashMap<Option<String>, Scalar> {
     match exprs.iter().any(|&x| x == "+") {
         true => {
             let idx = exprs.iter().position(|&x| x == "+").unwrap();
@@ -181,15 +181,25 @@ fn evaluate_inner(exprs: &Vec<&str>, first_is_negative: bool) -> HashMap<Option<
                         panic!("No ops, expected sub-expr to be a unit: {:?}", exprs[1]);
                     } else if exprs[0].starts_with('-') {
                         return evaluate_inner(&vec![&exprs[0][1..]], !first_is_negative);
-                    } else if exprs[0].parse::<i64>().is_ok() {
-                        let value = exprs[0].parse::<i64>().unwrap()
-                            * if first_is_negative { -1 } else { 1 };
+                    } else if exprs[0].parse::<i128>().is_ok() {
+                        let value = {
+                            if first_is_negative {
+                                Scalar::from_u128(exprs[0].parse::<i128>().unwrap().abs() as u128)
+                                    .neg()
+                            } else {
+                                Scalar::from_u128(exprs[0].parse::<i128>().unwrap() as u128)
+                            }
+                        };
                         let mut result = HashMap::new();
                         result.insert(None, value);
                         return result;
                     } else if is_valid_variable_name(exprs[0]) {
                         let mut result = HashMap::new();
-                        let value = if first_is_negative { -1 } else { 1i64 };
+                        let value = if first_is_negative {
+                            Scalar::one().neg()
+                        } else {
+                            Scalar::one()
+                        };
                         result.insert(Some(exprs[0].to_string()), value);
                         return result;
                     } else {
@@ -202,25 +212,25 @@ fn evaluate_inner(exprs: &Vec<&str>, first_is_negative: bool) -> HashMap<Option<
 }
 
 fn merge_maps(
-    map1: &HashMap<Option<String>, i64>,
-    map2: &HashMap<Option<String>, i64>,
-) -> HashMap<Option<String>, i64> {
+    map1: &HashMap<Option<String>, Scalar>,
+    map2: &HashMap<Option<String>, Scalar>,
+) -> HashMap<Option<String>, Scalar> {
     let mut merged = HashMap::new();
     for (key, val) in map1.iter().chain(map2.iter()) {
-        *merged.entry(key.clone()).or_insert(0) += val;
+        *merged.entry(key.clone()).or_insert(Scalar::zero()) += val;
     }
     merged
 }
 
 fn multiply_maps(
-    map1: &HashMap<Option<String>, i64>,
-    map2: &HashMap<Option<String>, i64>,
-) -> HashMap<Option<String>, i64> {
+    map1: &HashMap<Option<String>, Scalar>,
+    map2: &HashMap<Option<String>, Scalar>,
+) -> HashMap<Option<String>, Scalar> {
     let mut result = HashMap::new();
     for (k1, v1) in map1.iter() {
         for (k2, v2) in map2.iter() {
             let product_key = get_product_key(k1.clone(), k2.clone());
-            *result.entry(product_key).or_insert(0) += v1 * v2;
+            *result.entry(product_key).or_insert(Scalar::zero()) += v1 * v2;
         }
     }
     result
@@ -258,23 +268,35 @@ fn is_valid_variable_name(name: &str) -> bool {
 
 #[cfg(test)]
 mod test_eval {
+    use bls12_381::Scalar;
+    use ff::PrimeField;
+
     use super::evaluate;
     #[test]
     fn test_evaluate() {
         let expr = "6000 - 700 - 80 + 9";
         let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(*evaluate(&exprs).values().into_iter().next().unwrap(), 5229);
+        assert_eq!(
+            *evaluate(&exprs).values().into_iter().next().unwrap(),
+            Scalar::from_u128(5229)
+        );
         let expr = "-6000 + 700 + 80 - 9";
         let exprs = expr.split_whitespace().collect::<Vec<&str>>();
         assert_eq!(
             *evaluate(&exprs).values().into_iter().next().unwrap(),
-            -5229
+            Scalar::from_u128(5229).neg()
         );
         let expr = "1 + 2 * 3";
         let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(*evaluate(&exprs).values().into_iter().next().unwrap(), 7);
+        assert_eq!(
+            *evaluate(&exprs).values().into_iter().next().unwrap(),
+            Scalar::from_u128(7)
+        );
         let expr = "-1 + 2 * 3";
         let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(*evaluate(&exprs).values().into_iter().next().unwrap(), 5);
+        assert_eq!(
+            *evaluate(&exprs).values().into_iter().next().unwrap(),
+            Scalar::from_u128(5)
+        );
     }
 }

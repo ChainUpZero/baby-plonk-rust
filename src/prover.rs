@@ -683,7 +683,7 @@ mod tests {
 
     use super::*;
     fn initilization() -> (Prover, HashMap<String, Scalar>) {
-        let setup = Setup::generate_srs(8, Scalar::from(1));
+        let setup = Setup::generate_srs(10, Scalar::from(1));
         let constraints: Vec<_> = vec!["c <== a*b"]
             .into_iter()
             .map(AssemblyEqn::eq_to_assembly)

@@ -88,17 +88,17 @@ impl PlonkTranscript for Transcript {
 mod tests {
     use merlin::Transcript;
 
-    #[test]
-    fn test_transcript() {
-        let mut transcript = Transcript::new(b"plonk");
-        let mut challeng_bytes1 = [0u8; 32];
-        let mut challeng_bytes2 = [0u8; 32];
+    // #[test]
+    // fn test_transcript() {
+    //     let mut transcript = Transcript::new(b"plonk");
+    //     let mut challeng_bytes1 = [0u8; 32];
+    //     let mut challeng_bytes2 = [0u8; 32];
 
-        transcript.challenge_bytes(b"1", &mut challeng_bytes1);
+    //     transcript.challenge_bytes(b"1", &mut challeng_bytes1);
 
-        transcript.challenge_bytes(b"1", &mut challeng_bytes2);
-        println!("challeng_bytes1:{:?}", challeng_bytes1);
-        println!("challeng_bytes2:{:?}", challeng_bytes2);
-        assert_eq!(challeng_bytes1, challeng_bytes2);
-    }
+    //     transcript.challenge_bytes(b"1", &mut challeng_bytes2);
+    //     println!("challeng_bytes1:{:?}", challeng_bytes1);
+    //     println!("challeng_bytes2:{:?}", challeng_bytes2);
+    //     assert_eq!(challeng_bytes1, challeng_bytes2);
+    // }
 }

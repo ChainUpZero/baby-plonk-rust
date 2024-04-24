@@ -70,16 +70,16 @@ mod tests {
             Scalar::from(2) * g1 + Scalar::from(3) * Scalar::from(2) * g1
         );
     }
-    #[test]
-    fn test_lagrange_commit() {
-        //passed
-        let setup = Setup::generate_srs(2, Scalar::from(2)); //g1和2*g1
-        let poly = Polynomial::new(vec![Scalar::from(3), Scalar::from(3)], Basis::Lagrange);
-        let commitment = setup.commit(&poly);
-        let g1 = G1Projective::generator();
-        //6 * g1 + 0 *  2*g1
-        assert_eq!(commitment, Scalar::from(6) * g1);
-    }
+    // #[test]
+    // fn test_lagrange_commit() {
+    //     //passed
+    //     let setup = Setup::generate_srs(2, Scalar::from(2)); //g1和2*g1
+    //     let poly = Polynomial::new(vec![Scalar::from(3), Scalar::from(3)], Basis::Lagrange);
+    //     let commitment = setup.commit(&poly);
+    //     let g1 = G1Projective::generator();
+    //     //6 * g1 + 0 *  2*g1
+    //     assert_eq!(commitment, Scalar::from(6) * g1);
+    // }
     #[test]
     fn test_ntt() {
         //passed

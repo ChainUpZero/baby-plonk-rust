@@ -1,0 +1,2 @@
+[alias]
+verify = "test --package baby-plonk-rust --test verify_proof_test -- verify_proof_test --exact --show-output "

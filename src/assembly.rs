@@ -28,81 +28,140 @@ pub struct AssemblyEqn {
 }
 
 impl AssemblyEqn {
+    // pub fn eq_to_assembly(eq: &str) -> AssemblyEqn {
+    //     //d <== a * c - 45 * a + 987
+    //     let parts = split_expression(eq);
+    //     let mut gate_wires = GateWire {
+    //         L: None,
+    //         R: None,
+    //         O: None,
+    //     };
+    //     let mut gate_coeffs = GateCoeffs {
+    //         L: Scalar::zero(),
+    //         R: Scalar::zero(),
+    //         M: Scalar::zero(),
+    //         O: Scalar::zero(),
+    //         C: Scalar::zero(),
+    //     };
+
+    //     for (i, part) in parts.iter().enumerate() {
+    //         if i == 0 {
+    //             //output
+    //             let (coeffs, variable) = extract_number_and_variable(part).unwrap();
+
+    //             assert_eq!(variable.len(), 1, "variable.len() not == 1");
+    //             gate_wires.O = Some(variable[0].clone());
+    //             gate_coeffs.O = -coeffs;
+    //         } else if part.contains("==") {
+    //             continue;
+    //         } else {
+    //             let (coeffs, variable) = extract_number_and_variable(part).unwrap();
+    //             //4*a*b => 4, vec![a,b]
+    //             assert_eq!(variable.len() <= 2, true, "variable.len() not <= 2");
+
+    //             if variable.len() == 0 {
+    //                 //C
+    //                 gate_coeffs.C = coeffs;
+    //             } else if variable.len() == 1 {
+    //                 //L or R
+    //                 if gate_coeffs.L.is_zero().into() {
+    //                     gate_coeffs.L = coeffs;
+    //                     gate_wires.L = Some(variable[0].clone());
+    //                 } else if gate_coeffs.R.is_zero().into() {
+    //                     gate_coeffs.R = coeffs;
+    //                     gate_wires.R = Some(variable[0].clone());
+    //                 } else {
+    //                     panic!("only need 1 L and 1 R");
+    //                 }
+    //             } else {
+    //                 //M
+    //                 //有两个变量
+    //                 //如果L和R都还没有，就将两个变量赋给他们
+    //                 //如果L已经有了，R还没有：就检查L是否在这两个变量中，如果在就将另一个变量赋值给R；如果L不在这两个变量中，则报错
+    //                 //如果L和R都有了，不操作
+    //                 gate_coeffs.M = coeffs;
+    //                 if gate_coeffs.L.is_zero().into() && gate_coeffs.R.is_zero().into() {
+    //                     gate_wires.L = Some(variable[0].clone());
+    //                     gate_wires.R = Some(variable[1].clone());
+    //                 } else if gate_coeffs.R.is_zero().into() {
+    //                     //L已经有，R还没有
+    //                     if gate_wires.L == Some(variable[0].clone()) {
+    //                         gate_wires.R = Some(variable[1].clone())
+    //                     } else if gate_wires.L == Some(variable[1].clone()) {
+    //                         gate_wires.R = Some(variable[0].clone());
+    //                     } else {
+    //                         panic!("only need 1 L and 1 R");
+    //                     }
+    //                 } else {
+    //                     panic!("only need 1 L and 1 R");
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     AssemblyEqn {
+    //         wires: gate_wires,
+    //         coeffs: gate_coeffs,
+    //     }
+    // }
     pub fn eq_to_assembly(eq: &str) -> AssemblyEqn {
-        //d <== a * c - 45 * a + 987
-        let parts = split_expression(eq);
-        let mut gate_wires = GateWire {
-            L: None,
-            R: None,
-            O: None,
-        };
-        let mut gate_coeffs = GateCoeffs {
-            L: Scalar::zero(),
-            R: Scalar::zero(),
-            M: Scalar::zero(),
-            O: Scalar::zero(),
-            C: Scalar::zero(),
-        };
-
-        for (i, part) in parts.iter().enumerate() {
-            if i == 0 {
-                //output
-                let (coeffs, variable) = extract_number_and_variable(part).unwrap();
-
-                assert_eq!(variable.len(), 1, "variable.len() not == 1");
-                gate_wires.O = Some(variable[0].clone());
-                gate_coeffs.O = -coeffs;
-            } else if part.contains("==") {
-                continue;
-            } else {
-                let (coeffs, variable) = extract_number_and_variable(part).unwrap();
-                //4*a*b => 4, vec![a,b]
-                assert_eq!(variable.len() <= 2, true, "variable.len() not <= 2");
-
-                if variable.len() == 0 {
-                    //C
-                    gate_coeffs.C = coeffs;
-                } else if variable.len() == 1 {
-                    //L or R
-                    if gate_coeffs.L.is_zero().into() {
-                        gate_coeffs.L = coeffs;
-                        gate_wires.L = Some(variable[0].clone());
-                    } else if gate_coeffs.R.is_zero().into() {
-                        gate_coeffs.R = coeffs;
-                        gate_wires.R = Some(variable[0].clone());
-                    } else {
-                        panic!("only need 1 L and 1 R");
-                    }
-                } else {
-                    //M
-                    //有两个变量
-                    //如果L和R都还没有，就将两个变量赋给他们
-                    //如果L已经有了，R还没有：就检查L是否在这两个变量中，如果在就将另一个变量赋值给R；如果L不在这两个变量中，则报错
-                    //如果L和R都有了，不操作
-                    gate_coeffs.M = coeffs;
-                    if gate_coeffs.L.is_zero().into() && gate_coeffs.R.is_zero().into() {
-                        gate_wires.L = Some(variable[0].clone());
-                        gate_wires.R = Some(variable[1].clone());
-                    } else if gate_coeffs.R.is_zero().into() {
-                        //L已经有，R还没有
-                        if gate_wires.L == Some(variable[0].clone()) {
-                            gate_wires.R = Some(variable[1].clone())
-                        } else if gate_wires.L == Some(variable[1].clone()) {
-                            gate_wires.R = Some(variable[0].clone());
-                        } else {
-                            panic!("only need 1 L and 1 R");
-                        }
-                    } else {
-                        panic!("only need 1 L and 1 R");
-                    }
+        let tokens: Vec<&str> = eq.trim().split(" ").collect();
+        if tokens[1] == "<==" || tokens[1] == "===" {
+            // First token is the output variable
+            let out = tokens[0];
+            // Convert the expression to coefficient map form
+            let mut coeffs = evaluate(&tokens[2..].to_vec());
+            // Handle the "-x === a * b" case
+            if out.chars().nth(0).unwrap() == '-' {
+                out = &out[1..];
+                coeffs[&Some("$output_coeff".to_string())] = -1;
+            }
+            // Check out variable name validity
+            if !is_valid_variable_name(out) {
+                panic!("Invalid out variable name: {}", out);
+            }
+            // Gather list of variables used in the expression
+            let mut variables: Vec<&str> = Vec::new();
+            for &t in tokens[2..].iter() {
+                let var = &t.replace("-", "");
+                if is_valid_variable_name(var) && !variables.contains(&var.as_str()) {
+                    variables.push(var);
                 }
             }
+            // Construct the list of allowed coefficients
+            let allowed_coeffs: Vec<&str> = variables.clone();
+            allowed_coeffs.extend(vec![&"", &"$output_coeff"]);
+            if variables.is_empty() {
+                todo!();
+            } else if variables.len() == 1 {
+                variables.push(variables[0]);
+                allowed_coeffs.push(&get_product_key(Some(variables[0].to_owned()),Some(variables[1].to_owned())).unwrap());
+            } else if variables.len() == 2 {
+                allowed_coeffs.push(&get_product_key(Some(variables[0].to_owned()),Some(variables[1].to_owned())).unwrap());
+            } else {
+                panic!("Max 2 variables, found {}", variables.len());
+            }
+            // Check that only allowed coefficients are in the coefficient map
+            for key in coeffs.keys() {
+                if allowed_coeffs.contains(&&key.unwrap().as_str()) {
+                    panic!("Disallowed multiplication");
+                }
+            }
+            // Return output
+            let wires: Vec<Option<&str>> = variables.into_iter().map(Some).chain(vec![None; 2 - variables.len()]).collect();
+            wires.push(Some(out));
+            return AssemblyEqn{
+                wires:GateWire {
+                    L:Some(wires[0].unwrap().to_string()), 
+                    R:Some(wires[1].unwrap().to_string()), 
+                    O:Some(wires[2].unwrap().to_string()),
+                }, 
+                coeffs,};
+        } else if tokens[1] == "public" {
+            return AssemblyEqn(GateWires(&tokens[0], None, None), {"":-1, "$output_coeff": 0, "$public": true});
+        } else {
+            panic!("Unsupported op: {}", tokens[1]);
         }
-        AssemblyEqn {
-            wires: gate_wires,
-            coeffs: gate_coeffs,
-        }
-    }
+    }    
 }
 
 #[cfg(test)]

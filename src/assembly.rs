@@ -113,7 +113,7 @@ impl AssemblyEqn {
             // Handle the "-x === a * b" case
             if out.chars().nth(0).unwrap() == '-' {
                 out = &out[1..];
-                coeffs[&Some("$output_coeff".to_string())] = -1;
+                coeffs[&Some("$output_coeff".to_string())] = Scalar::from_u128(1).neg();
             }
             // Check out variable name validity
             if !is_valid_variable_name(out) {
@@ -149,15 +149,32 @@ impl AssemblyEqn {
             // Return output
             let wires: Vec<Option<&str>> = variables.into_iter().map(Some).chain(vec![None; 2 - variables.len()]).collect();
             wires.push(Some(out));
+            let mut coe = coeffs.values();
+            let L = coe.next().unwrap();
+            let R = coe.next().unwrap();
+            let M = coe.next().unwrap();
+            let O = coe.next().unwrap();
+            let C = coe.next().unwrap();
             return AssemblyEqn{
                 wires:GateWire {
                     L:Some(wires[0].unwrap().to_string()), 
                     R:Some(wires[1].unwrap().to_string()), 
                     O:Some(wires[2].unwrap().to_string()),
                 }, 
-                coeffs,};
+                coeffs: GateCoeffs {
+                    L:*L,
+                    R:*R,
+                    M:*M,
+                    O:*O,
+                    C:*C,
+                },};
         } else if tokens[1] == "public" {
-            return AssemblyEqn(GateWires(&tokens[0], None, None), {"":-1, "$output_coeff": 0, "$public": true});
+            return AssemblyEqn{
+                wires:GateWire{
+                    L:Some(tokens[0].to_string()), 
+                    R:None, 
+                    O:None}, 
+                coeffs:{"":-1, "$output_coeff": 0, "$public": true}};
         } else {
             panic!("Unsupported op: {}", tokens[1]);
         }

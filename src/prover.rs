@@ -59,6 +59,7 @@ pub struct Prover {
     evals: Option<Evaluations>,
     k1: Scalar,
     k2: Scalar,
+    blinding_coeffs: Option<[Scalar; 11]>,
 }
 impl Prover {
     pub fn new(setup: Setup, program: Program) -> Prover {
@@ -98,10 +99,16 @@ impl Prover {
             evals: None,
             k1: Scalar::from(2),
             k2: Scalar::from(3),
+            blinding_coeffs: None,
         }
     }
 
     pub fn prove(&mut self, witness: HashMap<String, Scalar>) -> Proof {
+        println!("Prove started...");
+        let mut rng = rand::thread_rng();
+
+        self.blinding_coeffs = Some([Scalar::from(0); 11].map(|_| Scalar::random(&mut rng)));
+
         let mut transcript = Transcript::new(b"plonk");
 
         //round1
@@ -130,6 +137,8 @@ impl Prover {
         let (w_zeta_1, w_zeta_omega_1) = self.round_5();
         let mu = transcript.round_5(w_zeta_1, w_zeta_omega_1);
         self.random_nums.mu = Some(mu);
+
+        println!("Prove finished");
 
         Proof {
             a_1,
@@ -181,14 +190,14 @@ impl Prover {
 
         let z_h_coeff = Polynomial::new(z_h_values, Basis::Monomial);
 
-        let (b1, b2, b3, b4, b5, b6) = (
-            Scalar::from(1),
-            Scalar::from(2),
-            Scalar::from(3),
-            Scalar::from(4),
-            Scalar::from(5),
-            Scalar::from(6),
-        );
+        let [b1, b2, b3, b4, b5, b6] = [
+            self.blinding_coeffs.unwrap()[0],
+            self.blinding_coeffs.unwrap()[1],
+            self.blinding_coeffs.unwrap()[2],
+            self.blinding_coeffs.unwrap()[3],
+            self.blinding_coeffs.unwrap()[4],
+            self.blinding_coeffs.unwrap()[5],
+        ];
 
         let a = Polynomial::new(a_values, Basis::Lagrange);
         let b = Polynomial::new(b_values, Basis::Lagrange);
@@ -290,7 +299,11 @@ impl Prover {
 
         let z = Polynomial::new(z_values, Basis::Lagrange);
 
-        let (b7, b8, b9) = (Scalar::from(7), Scalar::from(8), Scalar::from(9));
+        let [b7, b8, b9] = [
+            self.blinding_coeffs.unwrap()[6],
+            self.blinding_coeffs.unwrap()[7],
+            self.blinding_coeffs.unwrap()[8],
+        ];
 
         let z_blinding = Polynomial::new(vec![b9, b8, b7], Basis::Monomial);
         let z_h_coeff = self.witness_polys.z_h_coeff.clone().unwrap();
@@ -466,11 +479,6 @@ impl Prover {
 
         println!("Generated the quotient polynomial!");
 
-        println!("t_coeff.len():{:?}", t_coeff.values.len());
-        println!("t_lo_coeff.len():{:?}", t_lo_coeff.values.len());
-        println!("t_mid_coeff.len():{:?}", t_mid_coeff.values.len());
-        println!("t_hi_coeff.len():{:?}", t_hi_coeff.values.len());
-
         //x^n
         let mut x_pow_n_values = vec![Scalar::zero(); self.group_order as usize + 1];
         x_pow_n_values[self.group_order as usize] = Scalar::from(1);
@@ -484,7 +492,10 @@ impl Prover {
                 + Polynomial::new(x_pow_n_values.clone(), Basis::Monomial) * t_mid_coeff.clone()
                 + Polynomial::new(x_pow_2n_values, Basis::Monomial) * t_hi_coeff.clone()
         );
-        let (b10, b11) = (Scalar::from(10), Scalar::from(11));
+        let [b10, b11] = [
+            self.blinding_coeffs.unwrap()[9],
+            self.blinding_coeffs.unwrap()[10],
+        ];
 
         let t_lo_blinding = Polynomial::new(x_pow_n_values.clone(), Basis::Monomial) * b10;
         let t_mid_blinding = Polynomial::new(x_pow_n_values, Basis::Monomial) * b11 - b10;
@@ -644,12 +655,6 @@ impl Prover {
 
         let w_zeta_omega_coeff = (z_coeff - z_omega_bar)
             / Polynomial::new(x_minus_zeta_omega_poly_values, Basis::Monomial);
-
-        println!("w_zeta.len():{:?}", w_zeta_coeff.values.len());
-        println!(
-            "w_zeta_omega_coeff.len():{:?}",
-            w_zeta_omega_coeff.values.len()
-        );
 
         let w_zeta_1 = self.setup.commit(&w_zeta_coeff);
         let w_zeta_omega_1 = self.setup.commit(&w_zeta_omega_coeff);

@@ -8,15 +8,7 @@ pub enum Column {
     RIGHT,
     OUTPUT,
 }
-// impl Column {
-//     pub fn value(&self) -> usize {
-//         match self {
-//             Column::LEFT => 1,
-//             Column::RIGHT => 2,
-//             Column::OUTPUT => 3,
-//         }
-//     }
-// }
+
 impl From<usize> for Column {
     fn from(value: usize) -> Self {
         match value {

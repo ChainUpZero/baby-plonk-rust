@@ -78,6 +78,7 @@ impl Verifier {
         }
     }
     pub fn verify(&mut self) -> bool {
+        println!("Verification started...");
         //step 4
         let (beta, gamma, alpha, zeta, nu, mu) = self.compute_challengs(self.proof);
 

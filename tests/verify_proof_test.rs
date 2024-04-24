@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Instant;
 
 use baby_plonk_rust::{
     assembly::AssemblyEqn,
@@ -22,8 +23,6 @@ fn verify_proof_test() {
         .map(AssemblyEqn::eq_to_assembly)
         .collect();
 
-    println!("constraints:{:?}", constraints);
-
     //ql * a(x) + qr*b(x) + qm*a(x)*b(x) + qo*c(x) + qc=0
     // assert_eq!(constraints[0].wires.L, Some("a".to_string()));
     // assert_eq!(constraints[0].wires.R, Some("b".to_string()));
@@ -35,6 +34,7 @@ fn verify_proof_test() {
     // assert_eq!(constraints[0].coeffs.C, Scalar::zero());
 
     let program = Program::new(constraints, 8);
+
     let mut prover = Prover::new(setup.clone(), program.clone());
 
     let mut witness: HashMap<String, Scalar> = HashMap::new();
@@ -48,10 +48,17 @@ fn verify_proof_test() {
     // let (t_lo_1, t_mid_1, t_hi_1) = prover.round_3();
     // let (a_bar, b_bar, c_bar, s1_bar, s2_bar, z_omega_bar) = prover.round_4();
     // let (w_zeta_1, w_zeta_omega_1) = prover.round_5();
-
+    let prove_start = Instant::now();
     let proof = prover.prove(witness);
+    let prove_duration = prove_start.elapsed();
 
     let mut verifier = Verifier::new(setup, program, proof);
 
+    let verify_start = Instant::now();
     assert_eq!(verifier.verify(), true);
+    let verify_duration = verify_start.elapsed();
+
+    println!("Verification passed");
+    println!("Prove time: {:?}", prove_duration);
+    println!("Verify time: {:?}", verify_duration);
 }

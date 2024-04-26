@@ -1,2 +1,3 @@
 [alias]
 verify = "test --package baby-plonk-rust --test verify_proof_test -- verify_proof_test --exact --show-output "
+verify_release = "test --release --package baby-plonk-rust --test verify_proof_test -- verify_proof_test --exact --show-output "

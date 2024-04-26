@@ -150,153 +150,12 @@ impl Prover {
         self.random_nums.nu = Some(nu);
 
         //round5
-        // let (w_zeta_1, w_zeta_omega_1) = self.round_5();
-        let round5_test_return = self.round_5();
-        let w_zeta_1 = round5_test_return.w_zeta_1;
-        let w_zeta_omega_1 = round5_test_return.w_zeta_omega_1;
+        let (w_zeta_1, w_zeta_omega_1) = self.round_5();
 
         let mu = transcript.round_5(w_zeta_1, w_zeta_omega_1);
         self.random_nums.mu = Some(mu);
 
         println!("Prove finished");
-        //以下测试
-        let mu = Scalar::from(3);
-
-        let ql_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.ql.values),
-            Basis::Monomial,
-        ));
-        let qr_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qr.values),
-            Basis::Monomial,
-        ));
-        let qo_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qo.values),
-            Basis::Monomial,
-        ));
-        let qc_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qc.values),
-            Basis::Monomial,
-        ));
-        let qm_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qm.values),
-            Basis::Monomial,
-        ));
-        let s1_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s1.values),
-            Basis::Monomial,
-        ));
-        let s2_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s2.values),
-            Basis::Monomial,
-        ));
-        let s3_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s3.values),
-            Basis::Monomial,
-        ));
-        let omega = root_of_unity(self.group_order);
-        let mut l1_values = vec![Scalar::one()];
-        for _ in 0..self.group_order - 1 {
-            l1_values.push(Scalar::zero());
-        }
-        let l1_coeff = Polynomial::new(l1_values, Basis::Lagrange).i_ntt();
-        let l_1_zeta = l1_coeff.coeffs_evaluate(zeta);
-        let z_h_zeta = zeta.pow(&[self.group_order, 0, 0, 0]) - Scalar::one();
-
-        let d_1_1 = a_bar * b_bar * qm_1 + a_bar * ql_1 + b_bar * qr_1 + c_bar * qo_1 + qc_1;
-        let d_1_2 = (a_bar.rlc(&zeta, beta, gamma)
-            * b_bar.rlc(&(self.k1 * zeta), beta, gamma)
-            * c_bar.rlc(&(self.k2 * zeta), beta, gamma)
-            * alpha
-            + l_1_zeta * alpha * alpha
-            + mu)
-            * z_1;
-        let d_1_3 = a_bar.rlc(&s1_bar, beta, gamma)
-            * b_bar.rlc(&s2_bar, beta, gamma)
-            * alpha
-            * beta
-            * z_omega_bar
-            * s3_1;
-        let d_1_4 = z_h_zeta
-            * (t_lo_1
-                + zeta.pow(&[self.group_order, 0, 0, 0]) * t_mid_1
-                + zeta.pow(&[2 * self.group_order, 0, 0, 0]) * t_hi_1);
-
-        let d_1 = d_1_1 + d_1_2 - d_1_3 - d_1_4;
-
-        let f_1 = d_1
-            + nu * a_1
-            + nu.pow(&[2, 0, 0, 0]) * b_1
-            + nu.pow(&[3, 0, 0, 0]) * c_1
-            + nu.pow(&[4, 0, 0, 0]) * s1_1
-            + nu.pow(&[5, 0, 0, 0]) * s2_1;
-
-        let public_input_poly = self.public_input_poly.clone().unwrap();
-        let public_input_eval = public_input_poly.i_ntt().coeffs_evaluate(zeta);
-
-        let r_0 = public_input_eval
-            - l_1_zeta * alpha * alpha
-            - alpha
-                * (a_bar.rlc(&s1_bar, beta, gamma))
-                * (b_bar.rlc(&s2_bar, beta, gamma))
-                * (c_bar + gamma)
-                * z_omega_bar;
-
-        let e_1 = (nu * a_bar
-            + nu.pow(&[2, 0, 0, 0]) * b_bar
-            + nu.pow(&[3, 0, 0, 0]) * c_bar
-            + nu.pow(&[4, 0, 0, 0]) * s1_bar
-            + nu.pow(&[5, 0, 0, 0]) * s2_bar
-            + mu * z_omega_bar
-            - r_0)
-            * G1Projective::generator();
-
-        println!("unsure e_1:{:?}:", G1Affine::from(e_1));
-        println!("unsure r_0:{:?}", r_0);
-
-        println!("unsure mu:{:?}", mu);
-        println!("round5_test_return.mu:{:?}", round5_test_return.mu);
-
-        assert_eq!(self.k1, round5_test_return.k1);
-        assert_eq!(self.k2, round5_test_return.k2);
-
-        assert_eq!(l_1_zeta, round5_test_return.l_1_zeta);
-        assert_eq!(z_1, round5_test_return.z_1);
-
-        assert_eq!(round5_test_return.d_1_1, d_1_1);
-
-        assert_eq!(round5_test_return.d_1_3, d_1_3);
-        assert_eq!(round5_test_return.d_1_4, d_1_4);
-        assert_eq!(round5_test_return.d_1_2, d_1_2);
-
-        assert!(
-            pairing(
-                &(w_zeta_1 + mu * w_zeta_omega_1).into(),
-                &self.setup.x_2.into()
-            ) == pairing(
-                &(zeta * w_zeta_1 + mu * zeta * omega * w_zeta_omega_1 + round5_test_return.f_1
-                    - e_1)
-                    .into(),
-                &G2Affine::generator(),
-            )
-        );
-
-        // assert_eq!(e_1, round5_test_return.e_1);
-        // assert_eq!(f_1, round5_test_return.f_1);
-
-        // let f_1 = round5_test_return.f_1;
-        // let e_1 = round5_test_return.e_1;
-
-        assert!(
-            pairing(
-                &(w_zeta_1 + mu * w_zeta_omega_1).into(),
-                &self.setup.x_2.into()
-            ) == pairing(
-                &(zeta * w_zeta_1 + mu * zeta * omega * w_zeta_omega_1 + f_1 - e_1).into(),
-                &G2Affine::generator(),
-            )
-        );
-        //以上
 
         Proof {
             a_1,
@@ -330,7 +189,7 @@ impl Prover {
         //a_values对应L
         //b_values对应R
         //c_values对应O
-        println!("self.program.constraints:{:?}", self.program.constraints);
+
         for (i, constraint) in self.program.constraints.iter().enumerate() {
             //constraint.wires = {L:Some('a'),R,Some('b'),O:Some('c')}
             //处理A的第i个约束
@@ -392,20 +251,20 @@ impl Prover {
         let b_1 = self.setup.commit(&b_coeff);
         let c_1 = self.setup.commit(&c_coeff);
 
-        let omega = root_of_unity(self.group_order);
+        // let omega = root_of_unity(self.group_order);
 
-        for i in 0..self.group_order - 1 {
-            assert_eq!(
-                (a.i_ntt() * self.pk.ql.i_ntt()
-                    + b.i_ntt() * self.pk.qr.i_ntt()
-                    + a.i_ntt() * b.i_ntt() * self.pk.qm.i_ntt()
-                    + c.i_ntt() * self.pk.qo.i_ntt()
-                    + self.public_input_poly.clone().unwrap().i_ntt()
-                    + self.pk.qc.i_ntt())
-                .coeffs_evaluate(omega.pow(&[i, 0, 0, 0])),
-                Scalar::zero()
-            );
-        }
+        // for i in 0..self.group_order - 1 {
+        //     assert_eq!(
+        //         (a.i_ntt() * self.pk.ql.i_ntt()
+        //             + b.i_ntt() * self.pk.qr.i_ntt()
+        //             + a.i_ntt() * b.i_ntt() * self.pk.qm.i_ntt()
+        //             + c.i_ntt() * self.pk.qo.i_ntt()
+        //             + self.public_input_poly.clone().unwrap().i_ntt()
+        //             + self.pk.qc.i_ntt())
+        //         .coeffs_evaluate(omega.pow(&[i, 0, 0, 0])),
+        //         Scalar::zero()
+        //     );
+        // }
 
         self.witness_polys.a = Some(a);
         self.witness_polys.b = Some(b);
@@ -459,36 +318,36 @@ impl Prover {
         }
 
         assert_eq!(z_values.pop().unwrap(), Scalar::from(1));
-        for i in 0..self.group_order as usize {
-            assert_eq!(
-                self.witness_polys.a.as_ref().unwrap().values[i].rlc(
-                    &roots_of_unity[i],
-                    beta,
-                    gamma
-                ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
-                    &(self.k1 * roots_of_unity[i]),
-                    beta,
-                    gamma
-                ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
-                    &(self.k2 * roots_of_unity[i]),
-                    beta,
-                    gamma
-                ) * z_values[i],
-                self.witness_polys.a.as_ref().unwrap().values[i].rlc(
-                    &self.pk.s1.values[i],
-                    beta,
-                    gamma
-                ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
-                    &self.pk.s2.values[i],
-                    beta,
-                    gamma
-                ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
-                    &self.pk.s3.values[i],
-                    beta,
-                    gamma
-                ) * z_values[(i + 1) % self.group_order as usize]
-            )
-        }
+        // for i in 0..self.group_order as usize {
+        //     assert_eq!(
+        //         self.witness_polys.a.as_ref().unwrap().values[i].rlc(
+        //             &roots_of_unity[i],
+        //             beta,
+        //             gamma
+        //         ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
+        //             &(self.k1 * roots_of_unity[i]),
+        //             beta,
+        //             gamma
+        //         ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
+        //             &(self.k2 * roots_of_unity[i]),
+        //             beta,
+        //             gamma
+        //         ) * z_values[i],
+        //         self.witness_polys.a.as_ref().unwrap().values[i].rlc(
+        //             &self.pk.s1.values[i],
+        //             beta,
+        //             gamma
+        //         ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
+        //             &self.pk.s2.values[i],
+        //             beta,
+        //             gamma
+        //         ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
+        //             &self.pk.s3.values[i],
+        //             beta,
+        //             gamma
+        //         ) * z_values[(i + 1) % self.group_order as usize]
+        //     )
+        // }
 
         let z = Polynomial::new(z_values, Basis::Lagrange);
 
@@ -568,63 +427,8 @@ impl Prover {
         let omega = root_of_unity(self.group_order);
         let z_omega_coeff = self.monomial_z_to_z_omega(z_coeff.clone(), omega);
 
-        //以下是测试
-
-        // for i in 0..self.group_order as usize {
-        //     assert_eq!(
-        //         self.witness_polys.a.as_ref().unwrap().values[i].rlc(
-        //             &roots_of_unity[i],
-        //             beta,
-        //             gamma
-        //         ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
-        //             &(self.k1 * roots_of_unity[i]),
-        //             beta,
-        //             gamma
-        //         ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
-        //             &(self.k2 * roots_of_unity[i]),
-        //             beta,
-        //             gamma
-        //         ) * self.witness_polys.z.clone().unwrap().values[i],
-        //         self.witness_polys.a.as_ref().unwrap().values[i].rlc(
-        //             &self.pk.s1.values[i],
-        //             beta,
-        //             gamma
-        //         ) * self.witness_polys.b.as_ref().unwrap().values[i].rlc(
-        //             &self.pk.s2.values[i],
-        //             beta,
-        //             gamma
-        //         ) * self.witness_polys.c.as_ref().unwrap().values[i].rlc(
-        //             &self.pk.s3.values[i],
-        //             beta,
-        //             gamma
-        //         ) * z_omega.values[i % self.group_order as usize]
-        //     )
-        // }
-
-        let omega = root_of_unity(self.group_order);
         let beta = self.random_nums.beta.unwrap();
         let gamma = self.random_nums.gamma.unwrap();
-
-        assert!(beta != Scalar::zero());
-        assert!(gamma != Scalar::zero());
-
-        let r2_x = (a_coeff.clone().coeffs_evaluate(omega) + beta * omega + gamma)
-            * (b_coeff.clone().coeffs_evaluate(omega) + beta * self.k1 * omega + gamma)
-            * (c_coeff.clone().coeffs_evaluate(omega) + beta * self.k2 * omega + gamma)
-            * z_coeff.clone().coeffs_evaluate(omega)
-            - (a_coeff.clone().coeffs_evaluate(omega)
-                + s1_coeff.clone().coeffs_evaluate(omega) * beta
-                + gamma)
-                * (b_coeff.clone().coeffs_evaluate(omega)
-                    + s2_coeff.clone().coeffs_evaluate(omega) * beta
-                    + gamma)
-                * (c_coeff.clone().coeffs_evaluate(omega)
-                    + self.pk.s3.i_ntt().coeffs_evaluate(omega) * beta
-                    + gamma)
-                * z_omega_coeff.clone().coeffs_evaluate(omega);
-        assert!(r2_x == Scalar::zero());
-
-        //以上
 
         let permutation_grand_product_coeff = (a_coeff.rlc(&roots_poly_coeff, beta, gamma)
             * b_coeff.rlc(&(roots_poly_coeff.clone() * self.k1), beta, gamma)
@@ -657,12 +461,13 @@ impl Prover {
         //x^2n
         let mut x_pow_2n_values = vec![Scalar::zero(); self.group_order as usize * 2 + 1];
         x_pow_2n_values[self.group_order as usize * 2] = Scalar::from(1);
-        assert_eq!(
-            t_coeff.clone(),
-            t_lo_coeff.clone()
-                + Polynomial::new(x_pow_n_values.clone(), Basis::Monomial) * t_mid_coeff.clone()
-                + Polynomial::new(x_pow_2n_values, Basis::Monomial) * t_hi_coeff.clone()
-        );
+
+        // assert_eq!(
+        //     t_coeff.clone(),
+        //     t_lo_coeff.clone()
+        //         + Polynomial::new(x_pow_n_values.clone(), Basis::Monomial) * t_mid_coeff.clone()
+        //         + Polynomial::new(x_pow_2n_values, Basis::Monomial) * t_hi_coeff.clone()
+        // );
         let [b10, b11] = [
             self.blinding_coeffs.unwrap()[9],
             self.blinding_coeffs.unwrap()[10],
@@ -675,10 +480,6 @@ impl Prover {
         let t_lo_coeff = t_lo_coeff + t_lo_blinding;
         let t_mid_coeff = t_mid_coeff + t_mid_blinding;
         let t_hi_coeff = t_hi_coeff + t_hi_blinding;
-
-        println!("t_lo_coeff.values.len():{:?}", t_lo_coeff.values.len());
-        println!("t_mid_coeff.values.len():{:?}", t_mid_coeff.values.len());
-        println!("t_hi_coeff.values.len():{:?}", t_hi_coeff.values.len());
 
         let t_lo_1 = self.setup.commit(&t_lo_coeff);
         let t_mid_1 = self.setup.commit(&t_mid_coeff);
@@ -740,7 +541,7 @@ impl Prover {
         (a_bar, b_bar, c_bar, s1_bar, s2_bar, z_omega_bar)
     }
 
-    pub fn round_5(&mut self) -> Round5TestReturn {
+    pub fn round_5(&mut self) -> (G1Projective, G1Projective) {
         let nu = self.random_nums.nu.unwrap();
 
         let a_bar = self.evals.as_ref().unwrap().a_bar;
@@ -843,264 +644,7 @@ impl Prover {
         self.witness_polys.w_zeta = Some(w_zeta_coeff.clone());
         self.witness_polys.w_zeta_omega = Some(w_zeta_omega_coeff.clone());
 
-        //以下测试
-
-        let mu = Scalar::from(3);
-        let x_poly = Polynomial::new(vec![Scalar::zero(), Scalar::one()], Basis::Monomial);
-        // let ql_coeff = self.pk.ql.clone().i_ntt();
-        // let qr_coeff = self.pk.qr.clone().i_ntt();
-        // let qm_coeff = self.pk.qm.clone().i_ntt();
-        // let qo_coeff = self.pk.qo.clone().i_ntt();
-        // let qc_coeff = self.pk.qc.clone().i_ntt();
-
-        let ql_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.ql.values),
-            Basis::Monomial,
-        ));
-        let qr_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qr.values),
-            Basis::Monomial,
-        ));
-        let qo_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qo.values),
-            Basis::Monomial,
-        ));
-        let qc_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qc.values),
-            Basis::Monomial,
-        ));
-        let qm_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.qm.values),
-            Basis::Monomial,
-        ));
-        let s1_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s1.values),
-            Basis::Monomial,
-        ));
-        let s2_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s2.values),
-            Basis::Monomial,
-        ));
-        let s3_1 = self.setup.commit(&Polynomial::new(
-            i_ntt_381(&self.pk.s3.values),
-            Basis::Monomial,
-        ));
-
-        let omega = root_of_unity(self.group_order);
-
-        let z_h_zeta = zeta.pow(&[self.group_order, 0, 0, 0]) - Scalar::one();
-
-        let mut l1_values = vec![Scalar::one()];
-        for _ in 0..self.group_order - 1 {
-            l1_values.push(Scalar::zero());
-        }
-        let l1_coeff = Polynomial::new(l1_values, Basis::Lagrange).i_ntt();
-        let l_1_zeta = l1_coeff.coeffs_evaluate(zeta);
-
-        // let l_1_zeta = omega * (z_h_zeta) * (n * (zeta - omega)).invert().unwrap(); //
-
-        let z_coeff = self.witness_polys.z_coeff.clone().unwrap();
-
-        let t_lo_coeff = self.witness_polys.t_lo_coeff.clone().unwrap();
-        let t_mid_coeff = self.witness_polys.t_mid_coeff.clone().unwrap();
-        let t_hi_coeff = self.witness_polys.t_hi_coeff.clone().unwrap();
-
-        let public_input_poly = self.public_input_poly.clone().unwrap();
-        let public_input_eval = public_input_poly.i_ntt().coeffs_evaluate(zeta);
-
-        // let d_1 = qm_coeff * a_bar * b_bar
-        //     + ql_coeff * a_bar
-        //     + qr_coeff * b_bar
-        //     + qo_coeff * c_bar
-        //     + qc_coeff;
-
-        // let d_2 = z_coeff
-        //     * (a_bar.rlc(&zeta, beta, gamma)
-        //         * b_bar.rlc(&(Scalar::from(2) * zeta), beta, gamma)
-        //         * c_bar.rlc(&(Scalar::from(3) * zeta), beta, gamma)
-        //         * alpha
-        //         + l_1_zeta * alpha * alpha
-        //         + mu);
-
-        // let d_3 = self.pk.s3.i_ntt()
-        //     * a_bar.rlc(&s1_bar, beta, gamma)
-        //     * b_bar.rlc(&s2_bar, beta, gamma)
-        //     * alpha
-        //     * beta
-        //     * z_omega_bar;
-
-        // let d_4 = (t_lo_coeff
-        //     + t_mid_coeff * zeta.pow(&[self.group_order, 0, 0, 0])
-        //     + t_hi_coeff * zeta.pow(&[2 * self.group_order, 0, 0, 0]))
-        //     * z_h_zeta;
-
-        // let d_coeff = d_1 + d_2 - d_3 - d_4;
-
-        let z_1 = self
-            .setup
-            .commit(&self.witness_polys.z_coeff.clone().unwrap());
-        let t_lo_1 = self.setup.commit(&t_lo_coeff);
-        let t_mid_1 = self.setup.commit(&t_mid_coeff);
-        let t_hi_1 = self.setup.commit(&t_hi_coeff);
-
-        let d_1_1 = a_bar * b_bar * qm_1 + a_bar * ql_1 + b_bar * qr_1 + c_bar * qo_1 + qc_1;
-
-        let d_1_2 = (a_bar.rlc(&zeta, beta, gamma)
-            * b_bar.rlc(&(self.k1 * zeta), beta, gamma)
-            * c_bar.rlc(&(self.k2 * zeta), beta, gamma)
-            * alpha
-            + l_1_zeta * alpha * alpha
-            + mu)
-            * z_1;
-        let d_1_3 = a_bar.rlc(&s1_bar, beta, gamma)
-            * b_bar.rlc(&s2_bar, beta, gamma)
-            * alpha
-            * beta
-            * z_omega_bar
-            * s3_1;
-        let d_1_4 = z_h_zeta
-            * (t_lo_1
-                + zeta.pow(&[self.group_order, 0, 0, 0]) * t_mid_1
-                + zeta.pow(&[2 * self.group_order, 0, 0, 0]) * t_hi_1);
-
-        let d_1 = d_1_1 + d_1_2 - d_1_3 - d_1_4;
-
-        // let f_coeff = d_coeff
-        //     + a_coeff * nu
-        //     + b_coeff * nu.pow(&[2, 0, 0, 0])
-        //     + c_coeff * nu.pow(&[3, 0, 0, 0])
-        //     + s1_coeff * nu.pow(&[4, 0, 0, 0])
-        //     + s2_coeff * nu.pow(&[5, 0, 0, 0]);
-
-        let a_1 = self
-            .setup
-            .commit(&self.witness_polys.a_coeff.clone().unwrap());
-        let b_1 = self
-            .setup
-            .commit(&self.witness_polys.b_coeff.clone().unwrap());
-        let c_1 = self
-            .setup
-            .commit(&self.witness_polys.c_coeff.clone().unwrap());
-
-        let f_1 = d_1
-            + nu * a_1
-            + nu.pow(&[2, 0, 0, 0]) * b_1
-            + nu.pow(&[3, 0, 0, 0]) * c_1
-            + nu.pow(&[4, 0, 0, 0]) * s1_1
-            + nu.pow(&[5, 0, 0, 0]) * s2_1;
-
-        let r_0 = public_input_eval
-            - l_1_zeta * alpha * alpha
-            - alpha
-                * (a_bar.rlc(&s1_bar, beta, gamma))
-                * (b_bar.rlc(&s2_bar, beta, gamma))
-                * (c_bar + gamma)
-                * z_omega_bar;
-
-        // let e = nu * a_bar
-        //     + nu.pow(&[2, 0, 0, 0]) * b_bar
-        //     + nu.pow(&[3, 0, 0, 0]) * c_bar
-        //     + nu.pow(&[4, 0, 0, 0]) * s1_bar
-        //     + nu.pow(&[5, 0, 0, 0]) * s2_bar
-        //     + mu * z_omega_bar
-        //     - r_0;
-
-        // assert_eq!(
-        //     (w_zeta_coeff.clone() + w_zeta_omega_coeff.clone() * mu) * x_poly.clone(),
-        //     w_zeta_coeff.clone() * zeta
-        //         + w_zeta_omega_coeff.clone() * mu * zeta * omega
-        //         + f_coeff.clone()
-        //         - e
-        // );
-        // assert_eq!(
-        //     pairing(
-        //         &((w_zeta_coeff.coeffs_evaluate(zeta)
-        //             + w_zeta_omega_coeff.coeffs_evaluate(zeta) * mu)
-        //             * G1Projective::generator())
-        //         .into(),
-        //         &(x_poly.coeffs_evaluate(zeta) * G2Projective::generator()).into()
-        //     ),
-        //     pairing(
-        //         &((w_zeta_coeff.coeffs_evaluate(zeta) * zeta
-        //             + w_zeta_omega_coeff.coeffs_evaluate(zeta) * mu * zeta * omega
-        //             + f_coeff.coeffs_evaluate(zeta)
-        //             - e)
-        //             * G1Projective::generator())
-        //         .into(),
-        //         &G2Affine::generator()
-        //     )
-        // );
-
-        //x * G2 => tau*G2
-
-        // assert_eq!(
-        //     pairing(
-        //         &self
-        //             .setup
-        //             .commit(&(w_zeta_coeff.clone() + w_zeta_omega_coeff.clone() * mu))
-        //             .into(),
-        //         &(tau * G2Projective::generator()).into()
-        //     ),
-        //     pairing(
-        //         &self
-        //             .setup
-        //             .commit(
-        //                 &(w_zeta_coeff.clone() * zeta
-        //                     + w_zeta_omega_coeff.clone() * mu * zeta * omega
-        //                     + f_coeff.clone()
-        //                     - e)
-        //             )
-        //             .into(),
-        //         &G2Affine::generator()
-        //     )
-        // );
-
-        let e_1 = (nu * a_bar
-            + nu.pow(&[2, 0, 0, 0]) * b_bar
-            + nu.pow(&[3, 0, 0, 0]) * c_bar
-            + nu.pow(&[4, 0, 0, 0]) * s1_bar
-            + nu.pow(&[5, 0, 0, 0]) * s2_bar
-            + mu * z_omega_bar
-            - r_0)
-            * G1Projective::generator();
-
-        println!("correct e_1:{:?}", G1Affine::from(e_1));
-        println!("correct r_0:{:?}", r_0);
-
-        assert_eq!(
-            pairing(
-                &(w_zeta_1 + w_zeta_omega_1 * mu) //没错
-                    .into(),
-                &(self.setup.x_2).into()
-            ),
-            pairing(
-                &(w_zeta_1 * zeta + mu * zeta * omega * w_zeta_omega_1 + f_1 - e_1).into(),
-                &G2Affine::generator()
-            )
-        );
-
-        //以上
-
-        // (w_zeta_1, w_zeta_omega_1)
-
-        Round5TestReturn {
-            x_2: self.setup.x_2,
-            mu,
-            zeta,
-            omega,
-            w_zeta_1,
-            w_zeta_omega_1,
-            f_1,
-            e_1,
-            d_1_1,
-            d_1_2,
-            d_1_3,
-            d_1_4,
-            k1: self.k1,
-            k2: self.k2,
-            z_1,
-            l_1_zeta,
-        }
+        (w_zeta_1, w_zeta_omega_1)
     }
 
     fn split_t_to_3pieces(&self, t: Polynomial) -> (Polynomial, Polynomial, Polynomial) {
@@ -1129,24 +673,6 @@ impl Prover {
             basis: Basis::Monomial,
         }
     }
-}
-struct Round5TestReturn {
-    w_zeta_1: G1Projective,
-    w_zeta_omega_1: G1Projective,
-    f_1: G1Projective,
-    e_1: G1Projective,
-    mu: Scalar,
-    omega: Scalar,
-    zeta: Scalar,
-    x_2: G2Projective,
-    d_1_1: G1Projective,
-    d_1_2: G1Projective,
-    d_1_3: G1Projective,
-    d_1_4: G1Projective,
-    k1: Scalar,
-    k2: Scalar,
-    z_1: G1Projective,
-    l_1_zeta: Scalar,
 }
 
 #[cfg(test)]

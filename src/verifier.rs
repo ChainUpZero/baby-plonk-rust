@@ -87,7 +87,7 @@ impl Verifier {
 
         //step 6
         let omega = root_of_unity(self.group_order);
-        let n = Scalar::from(self.group_order);
+
         let mut l1_values = vec![Scalar::one()];
         for _ in 0..self.group_order - 1 {
             l1_values.push(Scalar::zero());
@@ -110,7 +110,7 @@ impl Verifier {
         let s2_bar = self.proof.s2_bar;
         let c_bar = self.proof.c_bar;
         let z_omega_bar = self.proof.z_omega_bar;
-        // ?疑点
+
         let r_0 = public_input_eval
             - l_1_zeta * alpha * alpha
             - alpha

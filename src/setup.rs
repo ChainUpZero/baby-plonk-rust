@@ -1,4 +1,7 @@
-use crate::polynomial::{Basis, Polynomial};
+use crate::{
+    msm::BucketMSM,
+    polynomial::{Basis, Polynomial},
+};
 use bls12_381::{G1Projective, G2Projective, Scalar};
 #[derive(Debug, Clone)]
 pub struct Setup {
@@ -29,18 +32,8 @@ impl Setup {
     pub fn commit(&self, polynomial: &Polynomial) -> G1Projective {
         //默认是系数(monomial)形式
         assert_eq!(polynomial.basis, Basis::Monomial);
-        let values = polynomial.values.clone();
 
-        // assert_eq!(values.len(), self.powers_of_x.len());
-        let mut commitment = G1Projective::identity();
-        //commitment = a1 * g1 + a2 * tau * g1  + ...
-
-        for (i, scalar) in values.iter().enumerate() {
-            let point = self.powers_of_x[i];
-            commitment += scalar * point;
-        }
-
-        commitment
+        BucketMSM::bucket_msm(&self.powers_of_x, &polynomial.values.clone(), 256, 4)
     }
 }
 #[cfg(test)]

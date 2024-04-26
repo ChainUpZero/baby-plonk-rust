@@ -13,7 +13,7 @@ use bls12_381::Scalar;
 #[test]
 fn verify_proof_test() {
     //从1到tau^7*g1, tau = 1
-    let setup = Setup::generate_srs(8 + 6, Scalar::from(10));
+    let setup = Setup::generate_srs(8 + 6, Scalar::from(101));
 
     //程序为：
     //c <== a * b

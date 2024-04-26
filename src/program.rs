@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 
 use crate::assembly::GateWire;
 use crate::polynomial::Basis;
@@ -20,13 +21,11 @@ pub struct CommonPreprocessedInput {
     pub s1_coeff: Option<Polynomial>,
     pub s2_coeff: Option<Polynomial>,
 }
-
 #[derive(Clone)]
 pub struct Program {
     pub constraints: Vec<AssemblyEqn>,
     pub group_order: u64,
 }
-
 impl Program {
     pub fn new(constraints: Vec<AssemblyEqn>, group_order: u64) -> Program {
         Program {
@@ -61,11 +60,12 @@ impl Program {
         let mut O = vec![Scalar::zero(); self.group_order as usize];
         let mut C = vec![Scalar::zero(); self.group_order as usize];
         for (i, constraint) in self.constraints.iter().enumerate() {
-            L[i] = constraint.coeffs.L;
-            R[i] = constraint.coeffs.R;
-            M[i] = constraint.coeffs.M;
-            O[i] = constraint.coeffs.O;
-            C[i] = constraint.coeffs.C;
+            let gate = constraint.gate();
+            L[i] = gate.L;
+            R[i] = gate.R;
+            M[i] = gate.M;
+            O[i] = gate.O;
+            C[i] = gate.C;
         }
         (
             Polynomial::new(L, Basis::Lagrange),
@@ -151,13 +151,14 @@ impl Program {
     pub fn coeffs(&self) -> Vec<HashMap<Option<String>, Scalar>> {
         let mut coeffs = Vec::new();
         for constraint in self.constraints.iter() {
-            let mut constraint_coeffs = HashMap::new();
-            constraint_coeffs.insert(Some("L".to_string()), constraint.coeffs.L);
-            constraint_coeffs.insert(Some("R".to_string()), constraint.coeffs.R);
-            constraint_coeffs.insert(Some("M".to_string()), constraint.coeffs.M);
-            constraint_coeffs.insert(Some("O".to_string()), constraint.coeffs.O);
-            constraint_coeffs.insert(Some("C".to_string()), constraint.coeffs.C);
-            coeffs.push(constraint_coeffs);
+            // let mut constraint_coeffs = HashMap::new();
+            // constraint_coeffs.insert(Some("L".to_string()), constraint.coeffs.L);
+            // constraint_coeffs.insert(Some("R".to_string()), constraint.coeffs.R);
+            // constraint_coeffs.insert(Some("M".to_string()), constraint.coeffs.M);
+            // constraint_coeffs.insert(Some("O".to_string()), constraint.coeffs.O);
+            // constraint_coeffs.insert(Some("C".to_string()), constraint.coeffs.C);
+            // coeffs.push(constraint_coeffs);
+            coeffs.push(constraint.coeffs.clone());
         }
         coeffs
     }
@@ -175,8 +176,7 @@ impl Program {
         let mut out = Vec::new();
         let mut no_more_allowed = false;
         for coeff in coeffs.iter() {
-            if coeff.get(&Some("$public".to_string())) != None
-            {
+            if coeff.get(&Some("$public".to_string())) != None {
                 if no_more_allowed {
                     panic!("Public var declarations must be at the top")
                 }
@@ -186,6 +186,7 @@ impl Program {
                         var_name.push(key.clone().unwrap());
                     }
                 }
+
                 out.push(Some(var_name.join("")));
             } else {
                 no_more_allowed = true;
@@ -212,7 +213,7 @@ mod test {
 
         //a b c
         //a e b
-        let original_constriants = ["c <== a*b", "b <== a*e"];
+        let original_constriants = ["c <== a * b", "b <== a * e"];
         let mut assembly_eqns = Vec::new();
         for eq in original_constriants.iter() {
             let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
@@ -238,30 +239,20 @@ mod test {
         // println!("s2:{:?}", s2);
         // println!("s3:{:?}", s3);
     }
-
     #[test]
-    fn test_coeffs() {
-        let original_constriants = ["c <== a*b", "b <== a*e"];
+    fn test_make_gate_polynomials() {
+        let original_constriants = ["e public", "c <== a * b", "e <== c * d"];
         let mut assembly_eqns = Vec::new();
         for eq in original_constriants.iter() {
             let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
             assembly_eqns.push(assembly_eqn);
         }
         let program = Program::new(assembly_eqns, 8);
-        let coeffs = program.coeffs();
-        println!("{:#?}", coeffs);
-    }
-
-    #[test]
-    fn test_wires() {
-        let original_constriants = ["c <== a*b", "b <== a*e"];
-        let mut assembly_eqns = Vec::new();
-        for eq in original_constriants.iter() {
-            let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
-            assembly_eqns.push(assembly_eqn);
-        }
-        let program = Program::new(assembly_eqns, 8);
-        let t_wires = program.wires();
-        println!("{:#?}", t_wires);
+        let (l, r, m, o, c) = program.make_gate_polynomials();
+        println!("l:{:?}", l);
+        println!("r:{:?}", r);
+        println!("m:{:?}", m);
+        println!("o:{:?}", o);
+        println!("c:{:?}", c);
     }
 }

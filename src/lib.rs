@@ -1,4 +1,4 @@
-pub mod Prover;
+pub mod prover;
 pub mod assembly;
 pub mod polynomial;
 pub mod program;

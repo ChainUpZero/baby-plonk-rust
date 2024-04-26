@@ -4,21 +4,21 @@ use std::time::Instant;
 use baby_plonk_rust::{
     assembly::AssemblyEqn,
     program::Program,
+    prover::Prover,
     setup::Setup,
     verifier::{Proof, Verifier},
-    Prover::Prover,
 };
 use bls12_381::Scalar;
 
 #[test]
 fn verify_proof_test() {
     //从1到tau^7*g1, tau = 1
-    let setup = Setup::generate_srs(8 + 3, Scalar::from(1));
+    let setup = Setup::generate_srs(8 + 6, Scalar::from(10));
 
     //程序为：
-    //c <== a*b
+    //c <== a * b
     //b <== a + d
-    let constraints: Vec<_> = vec!["c <== a*b + a", "b <== a + d"]
+    let constraints: Vec<_> = vec!["e public", "c <== a * b + b", "e <== c * d"]
         .into_iter()
         .map(AssemblyEqn::eq_to_assembly)
         .collect();
@@ -39,9 +39,10 @@ fn verify_proof_test() {
 
     let mut witness: HashMap<String, Scalar> = HashMap::new();
     witness.insert("a".to_owned(), Scalar::from(3));
-    witness.insert("b".to_owned(), Scalar::from(5));
-    witness.insert("c".to_owned(), Scalar::from(18));
-    witness.insert("d".to_owned(), Scalar::from(2));
+    witness.insert("b".to_owned(), Scalar::from(4));
+    witness.insert("c".to_owned(), Scalar::from(16));
+    witness.insert("d".to_owned(), Scalar::from(5));
+    witness.insert("e".to_owned(), Scalar::from(80));
 
     // let (a_1, b_1, c_1) = prover.round_1(witness);
     // let z_1 = prover.round_2();
@@ -55,7 +56,7 @@ fn verify_proof_test() {
     let mut verifier = Verifier::new(setup, program, proof);
 
     let verify_start = Instant::now();
-    assert_eq!(verifier.verify(), true);
+    assert_eq!(verifier.verify(vec![Scalar::from(80)]), true);
     let verify_duration = verify_start.elapsed();
 
     println!("Verification passed");

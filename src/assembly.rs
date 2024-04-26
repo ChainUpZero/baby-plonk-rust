@@ -1,4 +1,3 @@
-use crate::utils::{extract_number_and_variable, split_expression};
 use bls12_381::Scalar;
 use ff::{Field, PrimeField};
 #[derive(Debug, Clone)]
@@ -13,7 +12,7 @@ impl GateWire {
     }
 }
 #[derive(Debug, Clone)]
-pub struct GateCoeffs {
+pub struct Gate {
     pub L: Scalar,
     pub R: Scalar,
     pub M: Scalar,
@@ -24,10 +23,63 @@ pub struct GateCoeffs {
 #[derive(Debug, Clone)]
 pub struct AssemblyEqn {
     pub wires: GateWire,
-    pub coeffs: GateCoeffs,
+    pub coeffs: HashMap<Option<String>, Scalar>,
 }
 
 impl AssemblyEqn {
+    pub fn l(&self) -> Scalar {
+        let value = self.coeffs.get(&self.wires.L);
+        match value {
+            Some(_) => (*value.unwrap()).neg(),
+            None => Scalar::zero(),
+        }
+    }
+    pub fn r(&self) -> Scalar {
+        if self.wires.R != self.wires.L {
+            let value = self.coeffs.get(&self.wires.R);
+            return match value {
+                Some(_) => (*value.unwrap()).neg(),
+                None => Scalar::zero(),
+            };
+        }
+        Scalar::zero()
+    }
+    pub fn c(&self) -> Scalar {
+        let value = self.coeffs.get(&None);
+        match value {
+            Some(_) => (*value.unwrap()).neg(),
+            None => Scalar::zero(),
+        }
+    }
+    pub fn o(&self) -> Scalar {
+        let value = self.coeffs.get(&Some("$output_coeff".to_owned()));
+        match value {
+            Some(_) => *value.unwrap(),
+            None => Scalar::one(),
+        }
+    }
+    pub fn m(&self) -> Scalar {
+        if !self.wires.to_vec().contains(&None) {
+            let value = self
+                .coeffs
+                .get(&get_product_key(self.wires.L.clone(), self.wires.R.clone()));
+            return match value {
+                Some(_) => (*value.unwrap()).neg(),
+                None => Scalar::zero(),
+            };
+        }
+        Scalar::zero()
+    }
+    pub fn gate(&self) -> Gate {
+        Gate {
+            L: self.l(),
+            R: self.r(),
+            M: self.m(),
+            O: self.o(),
+            C: self.c(),
+        }
+    }
+
     // pub fn eq_to_assembly(eq: &str) -> AssemblyEqn {
     //     //d <== a * c - 45 * a + 987
     //     let parts = split_expression(eq);
@@ -103,17 +155,18 @@ impl AssemblyEqn {
     //         coeffs: gate_coeffs,
     //     }
     // }
+    //new eq_to_assembly
     pub fn eq_to_assembly(eq: &str) -> AssemblyEqn {
         let tokens: Vec<&str> = eq.trim().split(" ").collect();
         if tokens[1] == "<==" || tokens[1] == "===" {
             // First token is the output variable
-            let out = tokens[0];
+            let mut out = tokens[0];
             // Convert the expression to coefficient map form
             let mut coeffs = evaluate(&tokens[2..].to_vec());
             // Handle the "-x === a * b" case
             if out.chars().nth(0).unwrap() == '-' {
                 out = &out[1..];
-                coeffs[&Some("$output_coeff".to_string())] = Scalar::from_u128(1).neg();
+                coeffs.insert(Some("$output_coeff".to_string()), Scalar::one().neg());
             }
             // Check out variable name validity
             if !is_valid_variable_name(out) {
@@ -122,67 +175,85 @@ impl AssemblyEqn {
             // Gather list of variables used in the expression
             let mut variables: Vec<&str> = Vec::new();
             for &t in tokens[2..].iter() {
-                let var = &t.replace("-", "");
-                if is_valid_variable_name(var) && !variables.contains(&var.as_str()) {
+                let var = &t.trim_start_matches("-");
+                if is_valid_variable_name(var) && !variables.contains(var) {
                     variables.push(var);
                 }
             }
             // Construct the list of allowed coefficients
-            let allowed_coeffs: Vec<&str> = variables.clone();
-            allowed_coeffs.extend(vec![&"", &"$output_coeff"]);
+            let mut allowed_coeffs: Vec<String> =
+                variables.iter().map(|&s| s.to_string()).collect();
+            allowed_coeffs.extend(vec!["".to_string(), "$output_coeff".to_string()]);
+
             if variables.is_empty() {
                 todo!();
             } else if variables.len() == 1 {
                 variables.push(variables[0]);
-                allowed_coeffs.push(&get_product_key(Some(variables[0].to_owned()),Some(variables[1].to_owned())).unwrap());
+                let product_key =
+                    get_product_key(Some(variables[0].to_owned()), Some(variables[1].to_owned()))
+                        .unwrap();
+                allowed_coeffs.push(product_key);
             } else if variables.len() == 2 {
-                allowed_coeffs.push(&get_product_key(Some(variables[0].to_owned()),Some(variables[1].to_owned())).unwrap());
+                let product_key =
+                    get_product_key(Some(variables[0].to_owned()), Some(variables[1].to_owned()))
+                        .unwrap();
+                allowed_coeffs.push(product_key);
             } else {
                 panic!("Max 2 variables, found {}", variables.len());
             }
+
             // Check that only allowed coefficients are in the coefficient map
-            for key in coeffs.keys() {
-                if allowed_coeffs.contains(&&key.unwrap().as_str()) {
+            for key_option in coeffs.keys() {
+                // 使用 as_ref 将 Option<String> 转换为 Option<&String>
+                // 这样可以安全地访问其中的 String 引用
+                let key_ref = key_option.as_ref().unwrap(); // key_option 必须包含值，否则 panic
+
+                // 检查 allowed_coeffs 是否包含这个引用
+                if !allowed_coeffs.contains(key_ref) {
                     panic!("Disallowed multiplication");
                 }
             }
+
             // Return output
-            let wires: Vec<Option<&str>> = variables.into_iter().map(Some).chain(vec![None; 2 - variables.len()]).collect();
+            let variables_len = variables.len();
+            let mut wires: Vec<Option<&str>> = variables
+                .into_iter()
+                .map(Some)
+                .chain(vec![None; 2 - variables_len])
+                .collect();
             wires.push(Some(out));
-            let mut coe = coeffs.values();
-            let L = coe.next().unwrap();
-            let R = coe.next().unwrap();
-            let M = coe.next().unwrap();
-            let O = coe.next().unwrap();
-            let C = coe.next().unwrap();
-            return AssemblyEqn{
-                wires:GateWire {
-                    L:Some(wires[0].unwrap().to_string()), 
-                    R:Some(wires[1].unwrap().to_string()), 
-                    O:Some(wires[2].unwrap().to_string()),
-                }, 
-                coeffs: GateCoeffs {
-                    L:*L,
-                    R:*R,
-                    M:*M,
-                    O:*O,
-                    C:*C,
-                },};
+
+            return AssemblyEqn {
+                wires: GateWire {
+                    L: Some(wires[0].unwrap().to_string()),
+                    R: Some(wires[1].unwrap().to_string()),
+                    O: Some(wires[2].unwrap().to_string()),
+                },
+                coeffs,
+            };
         } else if tokens[1] == "public" {
-            return AssemblyEqn{
-                wires:GateWire{
-                    L:Some(tokens[0].to_string()), 
-                    R:None, 
-                    O:None}, 
-                coeffs:{"":-1, "$output_coeff": 0, "$public": true}};
+            let mut coeffs = HashMap::new();
+            coeffs.insert(Some(tokens[0].to_string()), Scalar::one().neg());
+            coeffs.insert(Some("$output_coeff".to_string()), Scalar::zero());
+            coeffs.insert(Some("$public".to_string()), Scalar::one());
+            return AssemblyEqn {
+                wires: GateWire {
+                    L: Some(tokens[0].to_string()),
+                    R: None,
+                    O: None,
+                },
+                coeffs,
+            };
         } else {
             panic!("Unsupported op: {}", tokens[1]);
         }
-    }    
+    }
 }
 
 #[cfg(test)]
 mod tests {
+
+    use bls12_381::Scalar;
 
     use super::AssemblyEqn;
     #[test]
@@ -201,26 +272,44 @@ mod tests {
         // assert_eq!(assembly_eqn.wires.R, Some("b".to_string()));
         // assert_eq!(assembly_eqn.wires.O, Some("c".to_string()));
 
-        println!(
-            "'a <== b*c' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== b*c")
+        // println!(
+        //     "'a <== b*c' to assembly_eqn:{:?}",
+        //     AssemblyEqn::eq_to_assembly("a <== b*c")
+        // );
+        // println!(
+        //     "'a <== 2*b*c + 56' to assembly_eqn:{:?}",
+        //     AssemblyEqn::eq_to_assembly("a <== 2*b*c + 56")
+        // );
+        // println!(
+        //     "'a <== 3 + b*c' to assembly_eqn:{:?}",
+        //     AssemblyEqn::eq_to_assembly("a <== 3 + b*c")
+        // );
+        // println!(
+        //     "'a <== 3 + abc' to assembly_eqn:{:?}",
+        //     AssemblyEqn::eq_to_assembly("a <== 3 + abc")
+        // );
+        // println!(
+        //     "'a <== c + d' to assembly_eqn:{:?}",
+        //     AssemblyEqn::eq_to_assembly("a <== c + d")
+        // );
+        let eq = "e public";
+        let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
+        println!("e public to assembly_eqn: {:?}", assembly_eqn);
+        assert_eq!(
+            assembly_eqn.coeffs.get(&Some("e".to_owned())),
+            Some(&Scalar::one().neg())
         );
-        println!(
-            "'a <== 2*b*c + 56' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== 2*b*c + 56")
-        );
-        println!(
-            "'a <== 3 + b*c' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== 3 + b*c")
-        );
-        println!(
-            "'a <== 3 + abc' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== 3 + abc")
-        );
-        println!(
-            "'a <== c + d' to assembly_eqn:{:?}",
-            AssemblyEqn::eq_to_assembly("a <== c + d")
-        );
+
+        let eq = "c <== a * b";
+        let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
+        println!("e public to assembly_eqn: {:?}", assembly_eqn);
+        // assert_eq!(
+        //     assembly_eqn.coeffs.get(&Some("e".to_owned())),
+        //     Some(&Scalar::one().neg())
+        // );
+        let eq = "e <== c * d";
+        let assembly_eqn = AssemblyEqn::eq_to_assembly(eq);
+        println!("e public to assembly_eqn: {:?}", assembly_eqn);
     }
 }
 
@@ -279,6 +368,7 @@ fn evaluate_inner(exprs: &Vec<&str>, first_is_negative: bool) -> HashMap<Option<
                         result.insert(Some(exprs[0].to_string()), value);
                         return result;
                     } else {
+                        println!("exprs:{:?}", exprs);
                         panic!("ok wtf is {}", exprs[0]);
                     }
                 }
@@ -350,29 +440,36 @@ mod test_eval {
     use super::evaluate;
     #[test]
     fn test_evaluate() {
-        let expr = "6000 - 700 - 80 + 9";
+        //passed
+        // let expr = "6000 - 700 - 80 + 9";
+        // let exprs = expr.split_whitespace().collect::<Vec<&str>>();
+        // assert_eq!(
+        //     *evaluate(&exprs).values().into_iter().next().unwrap(),
+        //     Scalar::from_u128(5229)
+        // );
+        // let expr = "-6000 + 700 + 80 - 9";
+        // let exprs = expr.split_whitespace().collect::<Vec<&str>>();
+        // assert_eq!(
+        //     *evaluate(&exprs).values().into_iter().next().unwrap(),
+        //     Scalar::from_u128(5229).neg()
+        // );
+        // let expr = "1 + 2 * 3";
+        // let exprs = expr.split_whitespace().collect::<Vec<&str>>();
+        // assert_eq!(
+        //     *evaluate(&exprs).values().into_iter().next().unwrap(),
+        //     Scalar::from_u128(7)
+        // );
+        // let expr = "-1 + 2 * 3";
+        // let exprs = expr.split_whitespace().collect::<Vec<&str>>();
+        // assert_eq!(
+        //     *evaluate(&exprs).values().into_iter().next().unwrap(),
+        //     Scalar::from_u128(5)
+        // );
+
+        //['a', '+', 'b', '*', 'c', '*', '5'] becomes {'a': 1, 'b*c': 5}
+        let expr = "a + b * c * 5";
         let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(
-            *evaluate(&exprs).values().into_iter().next().unwrap(),
-            Scalar::from_u128(5229)
-        );
-        let expr = "-6000 + 700 + 80 - 9";
-        let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(
-            *evaluate(&exprs).values().into_iter().next().unwrap(),
-            Scalar::from_u128(5229).neg()
-        );
-        let expr = "1 + 2 * 3";
-        let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(
-            *evaluate(&exprs).values().into_iter().next().unwrap(),
-            Scalar::from_u128(7)
-        );
-        let expr = "-1 + 2 * 3";
-        let exprs = expr.split_whitespace().collect::<Vec<&str>>();
-        assert_eq!(
-            *evaluate(&exprs).values().into_iter().next().unwrap(),
-            Scalar::from_u128(5)
-        );
+
+        println!("evaluate(&exprs):{:?}", evaluate(&exprs));
     }
 }

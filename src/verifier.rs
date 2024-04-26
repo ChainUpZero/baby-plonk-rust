@@ -77,7 +77,7 @@ impl Verifier {
             k2: Scalar::from(3),
         }
     }
-    pub fn verify(&mut self) -> bool {
+    pub fn verify(&mut self, public_input: Vec<Scalar>) -> bool {
         println!("Verification started...");
         //step 4
         let (beta, gamma, alpha, zeta, nu, mu) = self.compute_challengs(self.proof);
@@ -88,10 +88,20 @@ impl Verifier {
         //step 6
         let omega = root_of_unity(self.group_order);
         let n = Scalar::from(self.group_order);
-        let l_1_zeta = omega * (z_h_zeta) * (n * (zeta - omega)).invert().unwrap();
+        let mut l1_values = vec![Scalar::one()];
+        for _ in 0..self.group_order - 1 {
+            l1_values.push(Scalar::zero());
+        }
+        let l1_coeff = Polynomial::new(l1_values, Basis::Lagrange).i_ntt();
+        let l_1_zeta = l1_coeff.coeffs_evaluate(zeta);
 
         //step 7
-        //todo
+        let mut public_input_values: Vec<_> = public_input.iter().map(|x| x.neg()).collect();
+        for _ in 0..self.group_order as usize - public_input.len() {
+            public_input_values.push(Scalar::zero());
+        }
+        let public_input_poly = Polynomial::new(public_input_values, Basis::Lagrange);
+        let public_input_eval = public_input_poly.i_ntt().coeffs_evaluate(zeta);
 
         //step 8
         let a_bar = self.proof.a_bar;
@@ -101,7 +111,7 @@ impl Verifier {
         let c_bar = self.proof.c_bar;
         let z_omega_bar = self.proof.z_omega_bar;
         // ?疑点
-        let r_0 = Scalar::zero()
+        let r_0 = public_input_eval
             - l_1_zeta * alpha * alpha
             - alpha
                 * (a_bar.rlc(&s1_bar, beta, gamma))

@@ -1,6 +1,4 @@
 use std::collections::HashMap;
-use std::hash::Hash;
-
 use crate::assembly::GateWire;
 use crate::polynomial::Basis;
 use crate::utils::{roots_of_unity, Cell, Column};

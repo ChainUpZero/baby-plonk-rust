@@ -1,5 +1,5 @@
 use bls12_381::Scalar;
-use ff::{Field, PrimeField};
+use ff::PrimeField;
 #[derive(Debug, Clone)]
 pub struct GateWire {
     pub L: Option<String>,
@@ -434,9 +434,6 @@ fn is_valid_variable_name(name: &str) -> bool {
 
 #[cfg(test)]
 mod test_eval {
-    use bls12_381::Scalar;
-    use ff::PrimeField;
-
     use super::evaluate;
     #[test]
     fn test_evaluate() {

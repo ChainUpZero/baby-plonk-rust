@@ -86,8 +86,6 @@ impl PlonkTranscript for Transcript {
 }
 #[cfg(test)]
 mod tests {
-    use merlin::Transcript;
-
     // #[test]
     // fn test_transcript() {
     //     let mut transcript = Transcript::new(b"plonk");

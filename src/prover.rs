@@ -1,11 +1,10 @@
 use crate::polynomial::{Basis, Polynomial};
 use crate::program::{CommonPreprocessedInput, Program};
-use crate::setup::{self, Setup};
+use crate::setup::Setup;
 
 use crate::transcript::PlonkTranscript;
-use crate::utils::{i_ntt_381, ntt_381, root_of_unity, roots_of_unity, Rlc};
+use crate::utils::{i_ntt_381, root_of_unity, roots_of_unity, Rlc};
 use crate::verifier::Proof;
-use bls12_381::{pairing, G1Affine, G2Affine, G2Projective};
 use bls12_381::{G1Projective, Scalar};
 use ff::Field;
 use merlin::Transcript;
